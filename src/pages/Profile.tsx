@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -8,6 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import OfferCard from "@/components/explore/OfferCard"
+import { useOfferManagement } from "@/hooks/useOfferManagement"
 
 const OFFER_STATUSES = {
   AVAILABLE: 'available',
@@ -21,6 +21,7 @@ const Profile = () => {
   const navigate = useNavigate()
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const { deleteOffer, isDeleting } = useOfferManagement()
 
   const { data: profile } = useQuery({
     queryKey: ['profile'],
@@ -81,30 +82,7 @@ const Profile = () => {
   const handleDeleteOffer = (offerId: string) => {
     return async () => {
       try {
-        const { error: updateError } = await supabase
-          .from('offers')
-          .update({ 
-            status: OFFER_STATUSES.CANCELLED,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', offerId)
-
-        if (updateError) throw updateError
-
-        const { error: deleteError } = await supabase
-          .from('offers')
-          .delete()
-          .eq('id', offerId)
-
-        if (deleteError) throw deleteError
-
-        toast({
-          title: "Success",
-          description: "Offer deleted successfully"
-        })
-
-        // Refresh offers data
-        queryClient.invalidateQueries({ queryKey: ['user-offers'] })
+        await deleteOffer(offerId)
       } catch (error: any) {
         toast({
           variant: "destructive",

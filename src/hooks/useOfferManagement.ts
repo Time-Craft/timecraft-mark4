@@ -29,6 +29,7 @@ export const useOfferManagement = () => {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['offers'] })
+          queryClient.invalidateQueries({ queryKey: ['user-offers'] })
         }
       )
       .subscribe()
@@ -64,6 +65,9 @@ export const useOfferManagement = () => {
         title: "Success",
         description: "Offer created successfully",
       })
+      // Invalidate both user offers and all offers queries
+      queryClient.invalidateQueries({ queryKey: ['user-offers'] })
+      queryClient.invalidateQueries({ queryKey: ['offers'] })
     },
     onError: (error) => {
       toast({
@@ -98,6 +102,9 @@ export const useOfferManagement = () => {
         title: "Success",
         description: "Offer updated successfully",
       })
+      // Invalidate both queries
+      queryClient.invalidateQueries({ queryKey: ['user-offers'] })
+      queryClient.invalidateQueries({ queryKey: ['offers'] })
     },
     onError: (error) => {
       toast({
@@ -126,6 +133,8 @@ export const useOfferManagement = () => {
         title: "Success",
         description: "Offer deleted successfully",
       })
+      // Invalidate both queries
+      queryClient.invalidateQueries({ queryKey: ['user-offers'] })
       queryClient.invalidateQueries({ queryKey: ['offers'] })
     },
     onError: (error) => {
