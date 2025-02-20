@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import OfferCard from "@/components/explore/OfferCard"
@@ -21,9 +20,6 @@ const OFFER_STATUSES = {
 const Profile = () => {
   const navigate = useNavigate()
   const { toast } = useToast()
-  const [username, setUsername] = useState("")
-  const [services, setServices] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const queryClient = useQueryClient()
 
   const { data: profile } = useQuery({
@@ -44,64 +40,6 @@ const Profile = () => {
     staleTime: 1000 * 60 * 5
   })
 
-  useEffect(() => {
-    const channel = supabase
-      .channel('profile-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${profile?.id}`
-        },
-        (payload) => {
-          queryClient.setQueryData(['profile'], payload.new)
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [profile?.id, queryClient])
-
-  const updateProfileMutation = useMutation({
-    mutationFn: async ({ username, services }: { username: string, services: string[] }) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("No user found")
-
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          username,
-          services,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id)
-
-      if (error) throw error
-    },
-    onMutate: async ({ username, services }) => {
-      await queryClient.cancelQueries({ queryKey: ['profile'] })
-      const previousProfile = queryClient.getQueryData(['profile'])
-
-      queryClient.setQueryData(['profile'], (old: any) => ({
-        ...old,
-        username,
-        services
-      }))
-
-      return { previousProfile }
-    },
-    onError: (err, newProfile, context) => {
-      queryClient.setQueryData(['profile'], context?.previousProfile)
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile'] })
-    }
-  })
-
   const { data: userOffers } = useQuery({
     queryKey: ['user-offers'],
     queryFn: async () => {
@@ -118,85 +56,6 @@ const Profile = () => {
       return data
     },
     staleTime: 1000 * 60 * 5
-  })
-
-  useEffect(() => {
-    const channel = supabase
-      .channel('user-offers-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'offers',
-          filter: `profile_id=eq.${profile?.id}`
-        },
-        (payload) => {
-          if (payload.eventType === 'DELETE') {
-            queryClient.setQueryData(['user-offers'], (old: any[]) => 
-              old?.filter(offer => offer.id !== payload.old.id)
-            )
-          } else if (payload.eventType === 'INSERT') {
-            queryClient.setQueryData(['user-offers'], (old: any[]) => 
-              [payload.new, ...(old || [])]
-            )
-          } else if (payload.eventType === 'UPDATE') {
-            queryClient.setQueryData(['user-offers'], (old: any[]) => 
-              old?.map(offer => offer.id === payload.new.id ? payload.new : offer)
-            )
-          }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [profile?.id, queryClient])
-
-  const deleteOfferMutation = useMutation({
-    mutationFn: async (offerId: string) => {
-      const { error: updateError } = await supabase
-        .from('offers')
-        .update({ 
-          status: OFFER_STATUSES.CANCELLED,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', offerId)
-
-      if (updateError) throw updateError
-
-      const { error: deleteError } = await supabase
-        .from('offers')
-        .delete()
-        .eq('id', offerId)
-
-      if (deleteError) throw deleteError
-    },
-    onMutate: async (offerId) => {
-      await queryClient.cancelQueries({ queryKey: ['user-offers'] })
-      const previousOffers = queryClient.getQueryData(['user-offers'])
-      
-      queryClient.setQueryData(['user-offers'], (old: any[]) => 
-        old?.filter(offer => offer.id !== offerId)
-      )
-
-      return { previousOffers }
-    },
-    onError: (err, offerId, context) => {
-      queryClient.setQueryData(['user-offers'], context?.previousOffers)
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: `Failed to delete offer: ${err.message}`
-      })
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Offer deleted successfully"
-      })
-    }
   })
 
   const handleLogout = async () => {
@@ -219,34 +78,40 @@ const Profile = () => {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-
-    try {
-      await updateProfileMutation.mutateAsync({
-        username,
-        services: services.split(',').map(s => s.trim())
-      })
-
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been successfully updated"
-      })
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error updating profile",
-        description: error.message
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
   const handleDeleteOffer = (offerId: string) => {
-    return () => {
-      deleteOfferMutation.mutate(offerId)
+    return async () => {
+      try {
+        const { error: updateError } = await supabase
+          .from('offers')
+          .update({ 
+            status: OFFER_STATUSES.CANCELLED,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', offerId)
+
+        if (updateError) throw updateError
+
+        const { error: deleteError } = await supabase
+          .from('offers')
+          .delete()
+          .eq('id', offerId)
+
+        if (deleteError) throw deleteError
+
+        toast({
+          title: "Success",
+          description: "Offer deleted successfully"
+        })
+
+        // Refresh offers data
+        queryClient.invalidateQueries({ queryKey: ['user-offers'] })
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: `Failed to delete offer: ${error.message}`
+        })
+      }
     }
   }
 
@@ -265,41 +130,32 @@ const Profile = () => {
             <Avatar className="h-16 w-16 md:h-20 md:w-20">
               <AvatarImage src={profile?.avatar_url || "/placeholder.svg"} />
               <AvatarFallback>
-                {username?.substring(0, 2).toUpperCase() || 'UN'}
+                {profile?.username?.substring(0, 2).toUpperCase() || 'UN'}
               </AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-xl md:text-2xl">User Profile</CardTitle>
+              <CardTitle className="text-xl md:text-2xl">
+                {profile?.username || 'Username not set'}
+              </CardTitle>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Username</label>
-              <Input 
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Your username" 
-              />
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium mb-2">Interests</h3>
+              <div className="flex flex-wrap gap-2">
+                {profile?.services?.map((service: string) => (
+                  <span
+                    key={service}
+                    className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-secondary text-secondary-foreground"
+                  >
+                    {service}
+                  </span>
+                ))}
+              </div>
             </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Services Offered</label>
-              <Input 
-                value={services}
-                onChange={(e) => setServices(e.target.value)}
-                placeholder="e.g., Programming, Teaching, Gardening" 
-              />
-              <p className="text-sm text-muted-foreground">
-                Separate multiple services with commas
-              </p>
-            </div>
-            
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>
-          </form>
+          </div>
         </CardContent>
       </Card>
 
