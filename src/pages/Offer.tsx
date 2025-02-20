@@ -21,14 +21,18 @@ import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 
 const serviceCategories = [
-  "Tutoring",
-  "Elderly Care",
-  "Housekeeping",
-  "Handyman",
-  "Child Care",
+  "Programming",
+  "Teaching",
+  "Gardening",
+  "Design",
+  "Writing",
+  "Marketing",
+  "Translation",
+  "Consulting",
+  "Photography",
+  "Music",
   "Cooking",
-  "Pet Care",
-  "Others"
+  "Fitness"
 ]
 
 const Offer = () => {
