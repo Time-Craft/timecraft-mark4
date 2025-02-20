@@ -1,10 +1,10 @@
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { CheckCircle } from "lucide-react"
+import { CheckCircle, X } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 import { useQueryClient } from "@tanstack/react-query"
@@ -13,16 +13,61 @@ interface OnboardingProps {
   setIsNewUser: (value: boolean) => void;
 }
 
+const SERVICE_TYPES = [
+  "Programming",
+  "Teaching",
+  "Gardening",
+  "Design",
+  "Writing",
+  "Marketing",
+  "Translation",
+  "Consulting",
+  "Photography",
+  "Music",
+  "Cooking",
+  "Fitness"
+];
+
+const MIN_SERVICES = 3;
+
 const Onboarding = ({ setIsNewUser }: OnboardingProps) => {
   const navigate = useNavigate()
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const [username, setUsername] = useState("")
-  const [services, setServices] = useState("")
+  const [selectedServices, setSelectedServices] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    if (selectedServices.length < MIN_SERVICES) {
+      setError(`Please select at least ${MIN_SERVICES} services`)
+    } else {
+      setError("")
+    }
+  }, [selectedServices])
+
+  const handleServiceToggle = (service: string) => {
+    setSelectedServices(prev => {
+      if (prev.includes(service)) {
+        return prev.filter(s => s !== service)
+      }
+      return [...prev, service]
+    })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (selectedServices.length < MIN_SERVICES) {
+      toast({
+        variant: "destructive",
+        title: "Invalid selection",
+        description: `Please select at least ${MIN_SERVICES} services`
+      })
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
@@ -33,7 +78,7 @@ const Onboarding = ({ setIsNewUser }: OnboardingProps) => {
         .from('profiles')
         .update({
           username,
-          services: services.split(',').map(s => s.trim()),
+          services: selectedServices,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id)
@@ -87,19 +132,39 @@ const Onboarding = ({ setIsNewUser }: OnboardingProps) => {
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-medium">What services can you offer?</label>
-                <Input 
-                  placeholder="e.g., Programming, Teaching, Gardening" 
-                  value={services}
-                  onChange={(e) => setServices(e.target.value)}
-                  required
-                />
-                <p className="text-sm text-muted-foreground">
-                  Separate multiple services with commas
+                <label className="text-sm font-medium">What services interest you?</label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Select at least {MIN_SERVICES} services
                 </p>
+                <div className="flex flex-wrap gap-2">
+                  {SERVICE_TYPES.map(service => (
+                    <button
+                      key={service}
+                      type="button"
+                      onClick={() => handleServiceToggle(service)}
+                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-colors
+                        ${selectedServices.includes(service)
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                        }`}
+                    >
+                      {service}
+                      {selectedServices.includes(service) && (
+                        <X className="ml-1 h-3 w-3" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {error && (
+                  <p className="text-sm text-destructive mt-2">{error}</p>
+                )}
               </div>
               
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isSubmitting || selectedServices.length < MIN_SERVICES}
+              >
                 {isSubmitting ? "Saving..." : "Complete Setup"}
               </Button>
             </form>
