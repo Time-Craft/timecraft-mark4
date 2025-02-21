@@ -24,7 +24,7 @@ const MainNav = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <>
       {/* Desktop Navigation */}
       <nav className="border-b border-mint/20 hidden md:block bg-cream/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4">
@@ -85,11 +85,6 @@ const MainNav = () => {
           </div>
         </div>
       </nav>
-
-      {/* Main Content Area */}
-      <main className="flex-1 md:p-0 pb-20">
-        <div className="pb-16 md:pb-0" />
-      </main>
 
       {/* Mobile Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-cream/95 backdrop-blur-sm border-t border-mint/20 md:hidden z-50">
@@ -156,7 +151,12 @@ const MainNav = () => {
           </Link>
         </div>
       </nav>
-    </div>
+
+      {/* Add padding to main content to account for fixed bottom nav on mobile */}
+      <div className="md:pb-0 pb-20">
+        
+      </div>
+    </>
   )
 }
 
