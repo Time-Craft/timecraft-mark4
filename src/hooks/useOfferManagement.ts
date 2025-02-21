@@ -17,6 +17,7 @@ export const useOfferManagement = () => {
   const queryClient = useQueryClient()
   const { toast } = useToast()
 
+  // Real-time subscription for offer changes
   useEffect(() => {
     const channel = supabase
       .channel('offer-management')
@@ -27,7 +28,8 @@ export const useOfferManagement = () => {
           schema: 'public',
           table: 'offers'
         },
-        () => {
+        (payload) => {
+          console.log('Offer change detected:', payload)
           queryClient.invalidateQueries({ queryKey: ['offers'] })
           queryClient.invalidateQueries({ queryKey: ['user-offers'] })
         }
@@ -65,7 +67,7 @@ export const useOfferManagement = () => {
         title: "Success",
         description: "Offer created successfully",
       })
-      // Invalidate both user offers and all offers queries
+      // Invalidate both queries
       queryClient.invalidateQueries({ queryKey: ['user-offers'] })
       queryClient.invalidateQueries({ queryKey: ['offers'] })
     },
@@ -133,7 +135,7 @@ export const useOfferManagement = () => {
         title: "Success",
         description: "Offer deleted successfully",
       })
-      // Invalidate both queries
+      // Invalidate both queries immediately
       queryClient.invalidateQueries({ queryKey: ['user-offers'] })
       queryClient.invalidateQueries({ queryKey: ['offers'] })
     },

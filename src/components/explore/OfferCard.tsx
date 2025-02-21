@@ -5,9 +5,10 @@ import OfferHeader from "./OfferHeader"
 import OfferStatus from "./OfferStatus"
 import { Check, Hourglass, X, Trash2 } from "lucide-react"
 import { useApplicationManagement } from "@/hooks/useApplicationManagement"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
+import { useOfferManagement } from "@/hooks/useOfferManagement"
 
 interface OfferCardProps {
   offer: {
@@ -23,11 +24,12 @@ interface OfferCardProps {
     status: string
   }
   showApplications?: boolean
-  onDelete?: () => void
 }
 
-const OfferCard = ({ offer, showApplications = false, onDelete }: OfferCardProps) => {
+const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
   const { toast } = useToast()
+  const queryClient = useQueryClient()
+  const { deleteOffer, isDeleting } = useOfferManagement()
   const { 
     applyToOffer, 
     applications, 
@@ -50,22 +52,20 @@ const OfferCard = ({ offer, showApplications = false, onDelete }: OfferCardProps
 
   const handleDelete = async () => {
     try {
-      const { error } = await supabase
-        .from('offers')
-        .delete()
-        .eq('id', offer.id)
-        .eq('profile_id', currentUser?.id)
-
-      if (error) throw error
+      await deleteOffer(offer.id)
+      
+      // Optimistically remove the offer from both queries
+      queryClient.setQueryData(['offers'], (old: any) => 
+        old?.filter((o: any) => o.id !== offer.id) || []
+      )
+      queryClient.setQueryData(['user-offers'], (old: any) => 
+        old?.filter((o: any) => o.id !== offer.id) || []
+      )
 
       toast({
         title: "Success",
         description: "Offer deleted successfully",
       })
-
-      if (onDelete) {
-        onDelete()
-      }
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -116,6 +116,7 @@ const OfferCard = ({ offer, showApplications = false, onDelete }: OfferCardProps
                 onClick={handleDelete}
                 variant="destructive"
                 size="icon"
+                disabled={isDeleting}
                 className="w-full md:w-auto"
               >
                 <Trash2 className="h-4 w-4" />
