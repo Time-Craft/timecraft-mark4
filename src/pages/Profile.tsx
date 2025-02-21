@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -8,20 +9,36 @@ import { Plus } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import OfferCard from "@/components/explore/OfferCard"
 import { useOfferManagement } from "@/hooks/useOfferManagement"
-
-const OFFER_STATUSES = {
-  AVAILABLE: 'available',
-  PENDING: 'pending',
-  ACCEPTED: 'accepted',
-  COMPLETED: 'completed',
-  CANCELLED: 'cancelled'
-} as const
+import { useEffect } from "react"
 
 const Profile = () => {
   const navigate = useNavigate()
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const { deleteOffer, isDeleting } = useOfferManagement()
+
+  // Profile subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('profile-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        (payload) => {
+          console.log('Profile update received:', payload)
+          queryClient.invalidateQueries({ queryKey: ['profile'] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [queryClient])
 
   const { data: profile } = useQuery({
     queryKey: ['profile'],
@@ -37,8 +54,7 @@ const Profile = () => {
 
       if (error) throw error
       return data
-    },
-    staleTime: 1000 * 60 * 5
+    }
   })
 
   const { data: userOffers } = useQuery({
@@ -55,8 +71,7 @@ const Profile = () => {
 
       if (error) throw error
       return data
-    },
-    staleTime: 1000 * 60 * 5
+    }
   })
 
   const handleLogout = async () => {
