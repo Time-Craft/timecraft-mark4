@@ -22,33 +22,7 @@ export const useExploreOffers = () => {
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Enhanced real-time subscription setup
-  useEffect(() => {
-    const channel = supabase
-      .channel('explore-offers-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'offers'
-        },
-        (payload) => {
-          console.log('Explore offers real-time update received:', payload)
-          // Force an immediate refetch
-          queryClient.invalidateQueries({ 
-            queryKey: ['offers'],
-            refetchType: 'active'
-          })
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [queryClient])
-
+  // Enhanced query with real-time invalidation
   const { data: offers, isLoading } = useQuery({
     queryKey: ['offers', searchQuery],
     queryFn: async () => {
@@ -88,8 +62,30 @@ export const useExploreOffers = () => {
         }
       })) as Offer[]
     },
-    staleTime: 0 // Ensure we always get fresh data
   })
+
+  // Real-time subscription setup
+  useEffect(() => {
+    const channel = supabase
+      .channel('offers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'offers'
+        },
+        (payload) => {
+          console.log('Real-time update received:', payload)
+          queryClient.invalidateQueries({ queryKey: ['offers'] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [queryClient])
 
   const acceptOffer = useMutation({
     mutationFn: async (offerId: string) => {
