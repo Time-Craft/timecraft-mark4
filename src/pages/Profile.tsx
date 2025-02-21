@@ -8,14 +8,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import OfferCard from "@/components/explore/OfferCard"
-import { useOfferManagement } from "@/hooks/useOfferManagement"
 import { useEffect } from "react"
 
 const Profile = () => {
   const navigate = useNavigate()
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const { deleteOffer, isDeleting } = useOfferManagement()
 
   // Profile subscription
   useEffect(() => {
@@ -94,20 +92,6 @@ const Profile = () => {
     }
   }
 
-  const handleDeleteOffer = (offerId: string) => {
-    return async () => {
-      try {
-        await deleteOffer(offerId)
-      } catch (error: any) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: `Failed to delete offer: ${error.message}`
-        })
-      }
-    }
-  }
-
   return (
     <div className="container mx-auto p-4 space-y-6 max-w-2xl">
       <div className="flex justify-between items-center">
@@ -181,7 +165,6 @@ const Profile = () => {
                     }
                   }}
                   showApplications={true}
-                  onDelete={handleDeleteOffer(offer.id)}
                 />
               ))
             )}
