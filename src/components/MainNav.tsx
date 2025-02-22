@@ -1,4 +1,3 @@
-
 import { Link, useLocation } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Home, Search, Plus, User, Trophy, LogOut } from "lucide-react"
@@ -151,11 +150,6 @@ const MainNav = () => {
           </Link>
         </div>
       </nav>
-
-      {/* Add padding to main content to account for fixed bottom nav on mobile */}
-      <div className="md:pb-0 pb-20">
-        
-      </div>
     </>
   )
 }

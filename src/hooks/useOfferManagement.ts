@@ -67,7 +67,6 @@ export const useOfferManagement = () => {
         title: "Success",
         description: "Offer created successfully",
       })
-      // Invalidate both queries
       queryClient.invalidateQueries({ queryKey: ['user-offers'] })
       queryClient.invalidateQueries({ queryKey: ['offers'] })
     },
@@ -104,7 +103,6 @@ export const useOfferManagement = () => {
         title: "Success",
         description: "Offer updated successfully",
       })
-      // Invalidate both queries
       queryClient.invalidateQueries({ queryKey: ['user-offers'] })
       queryClient.invalidateQueries({ queryKey: ['offers'] })
     },
@@ -135,7 +133,6 @@ export const useOfferManagement = () => {
         title: "Success",
         description: "Offer deleted successfully",
       })
-      // Invalidate both queries immediately
       queryClient.invalidateQueries({ queryKey: ['user-offers'] })
       queryClient.invalidateQueries({ queryKey: ['offers'] })
     },

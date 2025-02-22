@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, Suspense, useCallback } from "react"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from "@/components/ui/sonner"
@@ -168,28 +169,30 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           {session && <MainNav />}
-          <Suspense fallback={<LoadingFallback />}>
-            <Routes>
-              {!session ? (
-                <Route path="*" element={<Login />} />
-              ) : isNewUser ? (
-                <>
-                  <Route path="/onboarding" element={<Onboarding setIsNewUser={setIsNewUser} />} />
-                  <Route path="*" element={<Navigate to="/onboarding" replace />} />
-                </>
-              ) : (
-                <>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/explore" element={<Explore />} />
-                  <Route path="/offer" element={<Offer />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/challenges" element={<Challenges />} />
-                  <Route path="/onboarding" element={<Onboarding setIsNewUser={setIsNewUser} />} />
-                  <Route path="*" element={<NotFound />} />
-                </>
-              )}
-            </Routes>
-          </Suspense>
+          <div className="pb-24 md:pb-0"> {/* Added padding wrapper */}
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                {!session ? (
+                  <Route path="*" element={<Login />} />
+                ) : isNewUser ? (
+                  <>
+                    <Route path="/onboarding" element={<Onboarding setIsNewUser={setIsNewUser} />} />
+                    <Route path="*" element={<Navigate to="/onboarding" replace />} />
+                  </>
+                ) : (
+                  <>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/explore" element={<Explore />} />
+                    <Route path="/offer" element={<Offer />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/challenges" element={<Challenges />} />
+                    <Route path="/onboarding" element={<Onboarding setIsNewUser={setIsNewUser} />} />
+                    <Route path="*" element={<NotFound />} />
+                  </>
+                )}
+              </Routes>
+            </Suspense>
+          </div>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

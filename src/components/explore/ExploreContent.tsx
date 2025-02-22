@@ -1,5 +1,4 @@
 
-import { useState } from 'react'
 import OfferList from './OfferList'
 import MapView from './MapView'
 
@@ -9,10 +8,11 @@ interface ExploreContentProps {
 
 const ExploreContent = ({ view }: ExploreContentProps) => {
   return (
-    <div className="w-full h-[calc(100vh-12rem)]">
+    <div className="w-full min-h-screen pb-24 md:pb-0">
       {view === 'list' ? <OfferList /> : <MapView />}
     </div>
   )
 }
 
 export default ExploreContent
+
