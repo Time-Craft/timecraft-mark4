@@ -21,6 +21,7 @@ export const useApplicationManagement = (offerId?: string) => {
         () => {
           queryClient.invalidateQueries({ queryKey: ['offer-applications'] })
           queryClient.invalidateQueries({ queryKey: ['user-application'] })
+          queryClient.invalidateQueries({ queryKey: ['user-applications'] })
         }
       )
       .subscribe()
@@ -72,6 +73,23 @@ export const useApplicationManagement = (offerId?: string) => {
     enabled: !!offerId
   })
 
+  // Get all applications for the current user
+  const { data: userApplications } = useQuery({
+    queryKey: ['user-applications'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return []
+
+      const { data, error } = await supabase
+        .from('offer_applications')
+        .select('*')
+        .eq('applicant_id', user.id)
+      
+      if (error) throw error
+      return data
+    }
+  })
+
   const applyToOffer = useMutation({
     mutationFn: async (offerId: string) => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -94,6 +112,7 @@ export const useApplicationManagement = (offerId?: string) => {
       })
       queryClient.invalidateQueries({ queryKey: ['offer-applications'] })
       queryClient.invalidateQueries({ queryKey: ['user-application'] })
+      queryClient.invalidateQueries({ queryKey: ['user-applications'] })
     },
     onError: (error: Error) => {
       toast({
@@ -143,6 +162,7 @@ export const useApplicationManagement = (offerId?: string) => {
       })
       queryClient.invalidateQueries({ queryKey: ['offer-applications'] })
       queryClient.invalidateQueries({ queryKey: ['offers'] })
+      queryClient.invalidateQueries({ queryKey: ['user-applications'] })
     },
     onError: (error: Error) => {
       toast({
@@ -156,6 +176,7 @@ export const useApplicationManagement = (offerId?: string) => {
   return {
     applications,
     userApplication,
+    userApplications,
     isLoadingApplications,
     applyToOffer: applyToOffer.mutate,
     updateApplicationStatus: updateApplicationStatus.mutate,

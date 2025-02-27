@@ -5,6 +5,7 @@ import { Suspense, useEffect } from "react"
 import { supabase } from "@/integrations/supabase/client"
 import { useQueryClient } from "@tanstack/react-query"
 import { useCurrentUserProfile, sortOffersByRelevance } from "@/utils/offerSort"
+import { useApplicationManagement } from "@/hooks/useApplicationManagement"
 
 interface OfferListProps {
   sortByRelevance?: boolean
@@ -22,6 +23,9 @@ const OfferList = ({ sortByRelevance = false }: OfferListProps) => {
   const { offers, isLoading } = useExploreOffers()
   const { data: userProfile } = useCurrentUserProfile()
   const queryClient = useQueryClient()
+  
+  // Get all applications for the current user to filter out applied offers
+  const { userApplications } = useApplicationManagement()
 
   // Set up real-time subscription for offer changes
   useEffect(() => {
@@ -71,10 +75,23 @@ const OfferList = ({ sortByRelevance = false }: OfferListProps) => {
     )
   }
 
+  // Get the IDs of offers the user has already applied to
+  const appliedOfferIds = userApplications?.map(app => app.offer_id) || []
+  
+  // Filter out offers the user has already applied to
+  const unappliedOffers = filteredOffers.filter(offer => 
+    !appliedOfferIds.includes(offer.id)
+  )
+
   // Apply sorting if enabled and user has services
-  const displayedOffers = sortByRelevance && userProfile?.services
-    ? sortOffersByRelevance(filteredOffers, userProfile.services)
-    : filteredOffers
+  const sortedOffers = sortByRelevance && userProfile?.services
+    ? sortOffersByRelevance(unappliedOffers, userProfile.services)
+    : unappliedOffers
+
+  // Limit to top 5 if sorting by relevance is enabled
+  const displayedOffers = sortByRelevance 
+    ? sortedOffers.slice(0, 5) 
+    : sortedOffers
 
   return (
     <Suspense fallback={<OfferListSkeleton />}>
