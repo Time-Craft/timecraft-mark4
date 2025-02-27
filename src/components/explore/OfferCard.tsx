@@ -24,6 +24,8 @@ interface OfferCardProps {
     status: string
     service_type?: string
     accepted_by?: string[]
+    isApplied?: boolean
+    applicationStatus?: string
   }
   showApplications?: boolean
 }
@@ -78,12 +80,41 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
   }
 
   const renderApplyButton = () => {
-    if (userApplication) {
+    // If this is an offer the user has already applied to (coming from the applications list)
+    if (offer.isApplied) {
+      const statusColorClass = offer.applicationStatus === 'pending' 
+        ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
+        : offer.applicationStatus === 'accepted'
+          ? 'bg-green-100 text-green-800 border-green-300'
+          : 'bg-red-100 text-red-800 border-red-300';
+        
       return (
         <Button 
           disabled 
           variant="secondary"
-          className="w-full md:w-auto mt-4 md:mt-0"
+          className={`w-full md:w-auto mt-4 md:mt-0 ${statusColorClass}`}
+        >
+          <Hourglass className="h-4 w-4 mr-1" />
+          {offer.applicationStatus === 'pending' ? 'Application Pending' : 
+            offer.applicationStatus === 'accepted' ? 'Application Accepted' : 
+            'Application Rejected'}
+        </Button>
+      );
+    }
+
+    // For regular offers that the user might want to apply to
+    if (userApplication) {
+      const statusColorClass = userApplication.status === 'pending' 
+        ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
+        : userApplication.status === 'accepted'
+          ? 'bg-green-100 text-green-800 border-green-300'
+          : 'bg-red-100 text-red-800 border-red-300';
+
+      return (
+        <Button 
+          disabled 
+          variant="secondary"
+          className={`w-full md:w-auto mt-4 md:mt-0 ${statusColorClass}`}
         >
           <Hourglass className="h-4 w-4 mr-1" />
           {userApplication.status === 'pending' ? 'Application Pending' : 
