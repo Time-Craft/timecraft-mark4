@@ -4,6 +4,11 @@ import OfferCard from "./OfferCard"
 import { Suspense, useEffect } from "react"
 import { supabase } from "@/integrations/supabase/client"
 import { useQueryClient } from "@tanstack/react-query"
+import { useCurrentUserProfile, sortOffersByRelevance } from "@/utils/offerSort"
+
+interface OfferListProps {
+  sortByRelevance?: boolean
+}
 
 const OfferListSkeleton = () => (
   <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -13,8 +18,9 @@ const OfferListSkeleton = () => (
   </div>
 )
 
-const OfferList = () => {
+const OfferList = ({ sortByRelevance = false }: OfferListProps) => {
   const { offers, isLoading } = useExploreOffers()
+  const { data: userProfile } = useCurrentUserProfile()
   const queryClient = useQueryClient()
 
   // Set up real-time subscription for offer changes
@@ -52,10 +58,28 @@ const OfferList = () => {
     )
   }
 
+  // Filter out offers created by the current user
+  const filteredOffers = offers.filter(offer => 
+    offer.user.id !== userProfile?.id
+  )
+
+  if (filteredOffers.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground">
+        No offers found from other users
+      </div>
+    )
+  }
+
+  // Apply sorting if enabled and user has services
+  const displayedOffers = sortByRelevance && userProfile?.services
+    ? sortOffersByRelevance(filteredOffers, userProfile.services)
+    : filteredOffers
+
   return (
     <Suspense fallback={<OfferListSkeleton />}>
       <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {offers.map((offer) => (
+        {displayedOffers.map((offer) => (
           <OfferCard 
             key={offer.id} 
             offer={offer}

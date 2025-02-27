@@ -22,6 +22,8 @@ interface OfferCardProps {
       avatar: string
     }
     status: string
+    service_type?: string
+    accepted_by?: string[]
   }
   showApplications?: boolean
 }
@@ -115,11 +117,11 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
               <Button
                 onClick={handleDelete}
                 variant="destructive"
-                size="icon"
                 disabled={isDeleting}
-                className="w-full md:w-auto"
+                className="w-full md:w-auto flex items-center justify-center"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
               </Button>
             )}
             {!isOwner && renderApplyButton()}
