@@ -1,6 +1,6 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Clock } from "lucide-react"
+import { Clock, Coins } from "lucide-react"
 
 interface OfferHeaderProps {
   user: {
@@ -24,9 +24,15 @@ const OfferHeader = ({ user, title, hours }: OfferHeaderProps) => {
           <p className="text-sm text-muted-foreground">{user.name}</p>
         </div>
       </div>
-      <div className="flex items-center text-muted-foreground">
-        <Clock className="mr-2 h-4 w-4" />
-        <span>{hours}h</span>
+      <div className="flex flex-col items-end space-y-2">
+        <div className="flex items-center text-muted-foreground">
+          <Clock className="mr-2 h-4 w-4" />
+          <span>{hours}h</span>
+        </div>
+        <div className="flex items-center text-muted-foreground">
+          <Coins className="mr-2 h-4 w-4" />
+          <span>{hours} TC</span>
+        </div>
       </div>
     </div>
   )
