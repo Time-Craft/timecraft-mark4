@@ -16,6 +16,7 @@ interface OfferCardProps {
     title: string
     description: string
     hours: number
+    timeCredits?: number
     user: {
       id: string
       name: string
@@ -139,7 +140,12 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
   return (
     <Card className="gradient-border card-hover">
       <CardContent className="p-6">
-        <OfferHeader user={offer.user} title={offer.title} hours={offer.hours} />
+        <OfferHeader 
+          user={offer.user} 
+          title={offer.title} 
+          hours={offer.hours}
+          timeCredits={offer.timeCredits} 
+        />
         <p className="mt-2 text-navy/80">{offer.description}</p>
         <div className="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <OfferStatus status={offer.status} />

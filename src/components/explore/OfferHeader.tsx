@@ -9,13 +9,17 @@ interface OfferHeaderProps {
   }
   title: string
   hours: number
+  timeCredits?: number // Add optional timeCredits property
 }
 
-const OfferHeader = ({ user, title, hours }: OfferHeaderProps) => {
+const OfferHeader = ({ user, title, hours, timeCredits }: OfferHeaderProps) => {
   // Format hours to handle decimal values correctly
   const formattedHours = hours === 1 ? "1h" : 
                          Number.isInteger(hours) ? `${hours}h` : 
                          `${hours.toFixed(1)}h`;
+
+  // If timeCredits is not provided, default to using hours
+  const credits = timeCredits !== undefined ? timeCredits : hours;
 
   return (
     <div className="flex items-start justify-between">
@@ -36,7 +40,7 @@ const OfferHeader = ({ user, title, hours }: OfferHeaderProps) => {
         </div>
         <div className="flex items-center text-muted-foreground">
           <Coins className="mr-2 h-4 w-4" />
-          <span>{hours} TC</span>
+          <span>{credits} TC</span>
         </div>
       </div>
     </div>
