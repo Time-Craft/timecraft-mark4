@@ -9,14 +9,15 @@ interface Offer {
   title: string
   description: string
   hours: number
-  service_type: string // Added this field to match the expected interface
+  time_credits?: number // Added this field
+  service_type: string 
   user: {
     id: string
     name: string
     avatar: string
   }
   status: string
-  accepted_by?: string[] // Added to match the expected interface
+  accepted_by?: string[] 
 }
 
 export const useExploreOffers = () => {
@@ -35,6 +36,7 @@ export const useExploreOffers = () => {
           title,
           description,
           hours,
+          time_credits,
           status,
           service_type,
           profiles!offers_profile_id_fkey (
@@ -57,9 +59,10 @@ export const useExploreOffers = () => {
         title: offer.title,
         description: offer.description,
         hours: offer.hours,
+        timeCredits: offer.time_credits || offer.hours, // Use time_credits or fallback to hours
         status: offer.status,
-        service_type: offer.service_type || offer.status, // Use service_type if available, otherwise fallback to status
-        accepted_by: [], // Initialize with empty array
+        service_type: offer.service_type || offer.status,
+        accepted_by: [],
         user: {
           id: offer.profiles?.id || '',
           name: offer.profiles?.username || 'Unknown User',

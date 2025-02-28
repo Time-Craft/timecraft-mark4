@@ -89,6 +89,7 @@ export type Database = {
           profile_id: string
           service_type: string
           status: string | null
+          time_credits: number | null
           title: string | null
           updated_at: string
         }
@@ -102,6 +103,7 @@ export type Database = {
           profile_id: string
           service_type: string
           status?: string | null
+          time_credits?: number | null
           title?: string | null
           updated_at?: string
         }
@@ -115,6 +117,7 @@ export type Database = {
           profile_id?: string
           service_type?: string
           status?: string | null
+          time_credits?: number | null
           title?: string | null
           updated_at?: string
         }

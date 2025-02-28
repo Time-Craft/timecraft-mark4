@@ -11,6 +11,7 @@ interface OfferInput {
   serviceType: string
   date?: string
   duration: number
+  timeCredits: number // Added this field
 }
 
 export const useOfferManagement = () => {
@@ -51,7 +52,8 @@ export const useOfferManagement = () => {
         .insert([{ 
           title: offer.title,
           description: offer.description,
-          hours: offer.hours,
+          hours: offer.duration, // Store the duration in hours
+          time_credits: offer.timeCredits, // Store the time credits separately
           service_type: offer.serviceType,
           date: offer.date,
           duration: offer.duration,
@@ -90,7 +92,8 @@ export const useOfferManagement = () => {
         .update({ 
           title: offer.title,
           description: offer.description,
-          hours: offer.hours,
+          hours: offer.duration, // Update the duration in hours
+          time_credits: offer.timeCredits, // Update the time credits
           service_type: offer.serviceType,
           updated_at: new Date().toISOString()
         })

@@ -53,10 +53,11 @@ const Offer = () => {
     await createOffer({
       title: finalServiceType, // Using service type as title since it's required in DB
       description,
-      hours: timeCredits[0],
+      hours: Number(duration),
+      duration: Number(duration),
+      timeCredits: timeCredits[0],
       serviceType: finalServiceType,
       date: date?.toISOString(),
-      duration: Number(duration)
     })
 
     navigate('/profile')
