@@ -12,6 +12,11 @@ interface OfferHeaderProps {
 }
 
 const OfferHeader = ({ user, title, hours }: OfferHeaderProps) => {
+  // Format hours to handle decimal values correctly
+  const formattedHours = hours === 1 ? "1h" : 
+                         Number.isInteger(hours) ? `${hours}h` : 
+                         `${hours.toFixed(1)}h`;
+
   return (
     <div className="flex items-start justify-between">
       <div className="flex items-center space-x-4">
@@ -27,7 +32,7 @@ const OfferHeader = ({ user, title, hours }: OfferHeaderProps) => {
       <div className="flex flex-col items-end space-y-2">
         <div className="flex items-center text-muted-foreground">
           <Clock className="mr-2 h-4 w-4" />
-          <span>{hours}h</span>
+          <span>{formattedHours}</span>
         </div>
         <div className="flex items-center text-muted-foreground">
           <Coins className="mr-2 h-4 w-4" />
