@@ -1,8 +1,8 @@
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useOfferManagement } from "@/hooks/useOfferManagement"
@@ -14,11 +14,12 @@ import {
   SelectValue 
 } from "@/components/ui/select"
 import { Calendar } from "@/components/ui/calendar"
-import { Calendar as CalendarIcon, CreditCard } from "lucide-react"
+import { Calendar as CalendarIcon, CreditCard, AlertCircle } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Slider } from "@/components/ui/slider"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 const serviceCategories = [
   "Programming",
@@ -37,16 +38,30 @@ const serviceCategories = [
 
 const Offer = () => {
   const navigate = useNavigate()
-  const { createOffer, isCreating } = useOfferManagement()
+  const { createOffer, isCreating, timeBalance } = useOfferManagement()
   const [description, setDescription] = useState("")
   const [serviceType, setServiceType] = useState("")
   const [otherServiceType, setOtherServiceType] = useState("")
   const [date, setDate] = useState<Date>()
   const [duration, setDuration] = useState("")
   const [timeCredits, setTimeCredits] = useState([1])
+  const [insufficientCredits, setInsufficientCredits] = useState(false)
+
+  // Check if user has enough credits whenever timeCredits or timeBalance changes
+  useEffect(() => {
+    if (timeCredits[0] > timeBalance) {
+      setInsufficientCredits(true)
+    } else {
+      setInsufficientCredits(false)
+    }
+  }, [timeCredits, timeBalance])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (insufficientCredits) {
+      return // Prevent form submission if not enough credits
+    }
     
     const finalServiceType = serviceType === "Others" ? otherServiceType : serviceType
     
@@ -70,6 +85,7 @@ const Offer = () => {
       <Card>
         <CardHeader>
           <CardTitle>Offer Details</CardTitle>
+          <div className="text-sm text-muted-foreground">Your available time credits: <span className="font-semibold text-teal">{timeBalance}</span></div>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
@@ -158,7 +174,10 @@ const Offer = () => {
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      className="w-full justify-start font-normal"
+                      className={cn(
+                        "w-full justify-start font-normal",
+                        insufficientCredits && "border-red-500 text-red-500"
+                      )}
                     >
                       <CreditCard className="mr-2 h-4 w-4" />
                       {timeCredits[0]} Credit{timeCredits[0] !== 1 ? 's' : ''}
@@ -185,13 +204,23 @@ const Offer = () => {
               </div>
             </div>
             
+            {insufficientCredits && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Insufficient Credits</AlertTitle>
+                <AlertDescription>
+                  You need {timeCredits[0]} credits for this offer but only have {timeBalance} available.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <div className="flex justify-end space-x-2">
               <Button type="button" variant="outline" onClick={() => navigate('/profile')}>
                 Cancel
               </Button>
               <Button 
                 type="submit" 
-                disabled={isCreating}
+                disabled={isCreating || insufficientCredits}
                 className="bg-teal hover:bg-teal/90 text-cream"
               >
                 {isCreating ? "Creating..." : "Create Offer"}
