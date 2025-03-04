@@ -9,10 +9,8 @@ import { useQueryClient } from "@tanstack/react-query"
 const QuickStats = () => {
   const queryClient = useQueryClient()
 
-  // Set up real-time subscription for both user_stats and time_balances
   useEffect(() => {
-    // Subscribe to user_stats changes
-    const statsChannel = supabase
+    const channel = supabase
       .channel('user-stats-changes')
       .on(
         'postgres_changes',
@@ -27,31 +25,12 @@ const QuickStats = () => {
         }
       )
       .subscribe()
-      
-    // Subscribe to time_balances changes
-    const balanceChannel = supabase
-      .channel('time-balance-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'time_balances',
-          filter: `user_id=eq.${supabase.auth.getUser().then(({ data }) => data.user?.id)}`
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['time-balance'] })
-        }
-      )
-      .subscribe()
 
     return () => {
-      supabase.removeChannel(statsChannel)
-      supabase.removeChannel(balanceChannel)
+      supabase.removeChannel(channel)
     }
   }, [queryClient])
 
-  // Fetch user stats
   const { data: stats } = useQuery({
     queryKey: ['user-stats'],
     queryFn: async () => {
@@ -69,24 +48,6 @@ const QuickStats = () => {
     }
   })
 
-  // Fetch time balance separately
-  const { data: timeBalance } = useQuery({
-    queryKey: ['time-balance'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("No user found")
-
-      const { data, error } = await supabase
-        .from('time_balances')
-        .select('balance')
-        .eq('user_id', user.id)
-        .single()
-
-      if (error) throw error
-      return data
-    }
-  })
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <Card className="gradient-border card-hover">
@@ -95,7 +56,7 @@ const QuickStats = () => {
           <Clock className="h-4 w-4 text-teal" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-navy">{timeBalance?.balance || 0} credits</div>
+          <div className="text-2xl font-bold text-navy">{stats?.time_balance || 0} hours</div>
         </CardContent>
       </Card>
       
