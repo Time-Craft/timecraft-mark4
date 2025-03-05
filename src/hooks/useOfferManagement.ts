@@ -1,4 +1,5 @@
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
+
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
 import { useEffect } from 'react'
@@ -10,34 +11,12 @@ interface OfferInput {
   serviceType: string
   date?: string
   duration: number
-  timeCredits: number
+  timeCredits: number // Added this field
 }
 
 export const useOfferManagement = () => {
   const queryClient = useQueryClient()
   const { toast } = useToast()
-
-  // Get user's time balance
-  const { data: timeBalance } = useQuery({
-    queryKey: ['time-balance'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
-
-      const { data, error } = await supabase
-        .from('user_stats')
-        .select('time_balance')
-        .eq('user_id', user.id)
-        .single()
-
-      if (error) {
-        console.error('Error fetching time balance:', error)
-        return 30 // Default to 30 if there's an error
-      }
-      
-      return data?.time_balance || 30
-    }
-  })
 
   // Real-time subscription for offer changes
   useEffect(() => {
@@ -58,26 +37,8 @@ export const useOfferManagement = () => {
       )
       .subscribe()
 
-    // Also subscribe to time_balances changes
-    const balanceChannel = supabase
-      .channel('time-balance-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'time_balances'
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['time-balance'] })
-          queryClient.invalidateQueries({ queryKey: ['user-stats'] })
-        }
-      )
-      .subscribe()
-
     return () => {
       supabase.removeChannel(channel)
-      supabase.removeChannel(balanceChannel)
     }
   }, [queryClient])
 
@@ -86,32 +47,13 @@ export const useOfferManagement = () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
 
-      // Check if user has enough credits
-      const { data: userData, error: userError } = await supabase
-        .from('user_stats')
-        .select('time_balance')
-        .eq('user_id', user.id)
-        .single()
-
-      if (userError) {
-        console.error('Error checking user credits:', userError)
-        throw userError
-      }
-      
-      // Use the fetched balance or default to 30 if not found
-      const currentBalance = userData?.time_balance ?? 30
-      
-      if (currentBalance < offer.timeCredits) {
-        throw new Error(`Insufficient time credits. You have ${currentBalance} credits, but the offer requires ${offer.timeCredits} credits.`)
-      }
-
       const { error } = await supabase
         .from('offers')
         .insert([{ 
           title: offer.title,
           description: offer.description,
-          hours: offer.duration,
-          time_credits: offer.timeCredits,
+          hours: offer.duration, // Store the duration in hours
+          time_credits: offer.timeCredits, // Store the time credits separately
           service_type: offer.serviceType,
           date: offer.date,
           duration: offer.duration,
@@ -130,8 +72,6 @@ export const useOfferManagement = () => {
       // Invalidate both queries
       queryClient.invalidateQueries({ queryKey: ['user-offers'] })
       queryClient.invalidateQueries({ queryKey: ['offers'] })
-      queryClient.invalidateQueries({ queryKey: ['time-balance'] })
-      queryClient.invalidateQueries({ queryKey: ['user-stats'] })
     },
     onError: (error) => {
       toast({
@@ -217,7 +157,6 @@ export const useOfferManagement = () => {
     deleteOffer: deleteOffer.mutate,
     isCreating: createOffer.isPending,
     isUpdating: updateOffer.isPending,
-    isDeleting: deleteOffer.isPending,
-    timeBalance
+    isDeleting: deleteOffer.isPending
   }
 }

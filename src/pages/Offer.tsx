@@ -1,8 +1,8 @@
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useOfferManagement } from "@/hooks/useOfferManagement"
@@ -14,13 +14,11 @@ import {
   SelectValue 
 } from "@/components/ui/select"
 import { Calendar } from "@/components/ui/calendar"
-import { Calendar as CalendarIcon, CreditCard, AlertCircle, Coins } from "lucide-react"
+import { Calendar as CalendarIcon, CreditCard } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Slider } from "@/components/ui/slider"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useToast } from "@/components/ui/use-toast"
 
 const serviceCategories = [
   "Programming",
@@ -39,35 +37,16 @@ const serviceCategories = [
 
 const Offer = () => {
   const navigate = useNavigate()
-  const { createOffer, isCreating, timeBalance } = useOfferManagement()
-  const { toast } = useToast()
+  const { createOffer, isCreating } = useOfferManagement()
   const [description, setDescription] = useState("")
   const [serviceType, setServiceType] = useState("")
   const [otherServiceType, setOtherServiceType] = useState("")
   const [date, setDate] = useState<Date>()
   const [duration, setDuration] = useState("")
   const [timeCredits, setTimeCredits] = useState([1])
-  
-  // Make sure we have the correct time balance (default to 30 if undefined)
-  const currentBalance = timeBalance ?? 30
-  const insufficientCredits = currentBalance < timeCredits[0]
-  
-  useEffect(() => {
-    // Log the current balance for debugging
-    console.log("Current time balance:", currentBalance)
-  }, [currentBalance])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (insufficientCredits) {
-      toast({
-        title: "Error",
-        description: `You don't have enough time credits. Available: ${currentBalance}, Required: ${timeCredits[0]}.`,
-        variant: "destructive",
-      })
-      return
-    }
     
     const finalServiceType = serviceType === "Others" ? otherServiceType : serviceType
     
@@ -90,25 +69,9 @@ const Offer = () => {
       
       <Card>
         <CardHeader>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <CardTitle>Offer Details</CardTitle>
-            <div className="flex items-center bg-teal/10 text-teal px-4 py-2 rounded-md">
-              <Coins className="mr-2 h-5 w-5" />
-              <span className="font-medium">Available Time Credits: {currentBalance}</span>
-            </div>
-          </div>
+          <CardTitle>Offer Details</CardTitle>
         </CardHeader>
         <CardContent>
-          {insufficientCredits && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                You don't have enough time credits to create this offer. 
-                Available: {currentBalance}, Required: {timeCredits[0]}.
-              </AlertDescription>
-            </Alert>
-          )}
-          
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <label className="text-sm font-medium">Service Type</label>
@@ -138,7 +101,7 @@ const Offer = () => {
                 />
               )}
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Description</label>
               <Textarea 
@@ -190,17 +153,14 @@ const Offer = () => {
               </div>
               
               <div className="space-y-2 flex-1">
-                <label className="text-sm font-medium">Time Credits (cost to create)</label>
+                <label className="text-sm font-medium">Time Credits</label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      className={cn(
-                        "w-full justify-start font-normal",
-                        insufficientCredits && "border-red-500 text-red-500"
-                      )}
+                      className="w-full justify-start font-normal"
                     >
-                      <CreditCard className={cn("mr-2 h-4 w-4", insufficientCredits && "text-red-500")} />
+                      <CreditCard className="mr-2 h-4 w-4" />
                       {timeCredits[0]} Credit{timeCredits[0] !== 1 ? 's' : ''}
                     </Button>
                   </PopoverTrigger>
@@ -231,11 +191,8 @@ const Offer = () => {
               </Button>
               <Button 
                 type="submit" 
-                disabled={isCreating || insufficientCredits}
-                className={cn(
-                  "bg-teal hover:bg-teal/90 text-cream",
-                  insufficientCredits && "opacity-50 cursor-not-allowed"
-                )}
+                disabled={isCreating}
+                className="bg-teal hover:bg-teal/90 text-cream"
               >
                 {isCreating ? "Creating..." : "Create Offer"}
               </Button>
