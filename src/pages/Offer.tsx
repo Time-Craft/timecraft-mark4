@@ -1,4 +1,5 @@
-import { useState } from "react"
+
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
@@ -19,6 +20,7 @@ import { Slider } from "@/components/ui/slider"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useToast } from "@/components/ui/use-toast"
 
 const serviceCategories = [
   "Programming",
@@ -38,6 +40,7 @@ const serviceCategories = [
 const Offer = () => {
   const navigate = useNavigate()
   const { createOffer, isCreating, timeBalance } = useOfferManagement()
+  const { toast } = useToast()
   const [description, setDescription] = useState("")
   const [serviceType, setServiceType] = useState("")
   const [otherServiceType, setOtherServiceType] = useState("")
@@ -45,13 +48,25 @@ const Offer = () => {
   const [duration, setDuration] = useState("")
   const [timeCredits, setTimeCredits] = useState([1])
   
-  const insufficientCredits = (timeBalance || 0) < timeCredits[0]
+  // Make sure we have the correct time balance (default to 30 if undefined)
+  const currentBalance = timeBalance ?? 30
+  const insufficientCredits = currentBalance < timeCredits[0]
+  
+  useEffect(() => {
+    // Log the current balance for debugging
+    console.log("Current time balance:", currentBalance)
+  }, [currentBalance])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (insufficientCredits) {
-      return;
+      toast({
+        title: "Error",
+        description: `You don't have enough time credits. Available: ${currentBalance}, Required: ${timeCredits[0]}.`,
+        variant: "destructive",
+      })
+      return
     }
     
     const finalServiceType = serviceType === "Others" ? otherServiceType : serviceType
@@ -79,7 +94,7 @@ const Offer = () => {
             <CardTitle>Offer Details</CardTitle>
             <div className="flex items-center bg-teal/10 text-teal px-4 py-2 rounded-md">
               <Coins className="mr-2 h-5 w-5" />
-              <span className="font-medium">Time Credits: {timeBalance || 0}</span>
+              <span className="font-medium">Available Time Credits: {currentBalance}</span>
             </div>
           </div>
         </CardHeader>
@@ -89,7 +104,7 @@ const Offer = () => {
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 You don't have enough time credits to create this offer. 
-                Available: {timeBalance || 0}, Required: {timeCredits[0]}.
+                Available: {currentBalance}, Required: {timeCredits[0]}.
               </AlertDescription>
             </Alert>
           )}

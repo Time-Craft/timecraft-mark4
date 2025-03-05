@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
@@ -31,8 +30,12 @@ export const useOfferManagement = () => {
         .eq('user_id', user.id)
         .single()
 
-      if (error) throw error
-      return data?.time_balance || 0
+      if (error) {
+        console.error('Error fetching time balance:', error)
+        return 30 // Default to 30 if there's an error
+      }
+      
+      return data?.time_balance || 30
     }
   })
 
@@ -90,10 +93,16 @@ export const useOfferManagement = () => {
         .eq('user_id', user.id)
         .single()
 
-      if (userError) throw userError
+      if (userError) {
+        console.error('Error checking user credits:', userError)
+        throw userError
+      }
       
-      if (!userData || userData.time_balance < offer.timeCredits) {
-        throw new Error(`Insufficient time credits. You have ${userData?.time_balance || 0} credits, but the offer requires ${offer.timeCredits} credits.`)
+      // Use the fetched balance or default to 30 if not found
+      const currentBalance = userData?.time_balance ?? 30
+      
+      if (currentBalance < offer.timeCredits) {
+        throw new Error(`Insufficient time credits. You have ${currentBalance} credits, but the offer requires ${offer.timeCredits} credits.`)
       }
 
       const { error } = await supabase
