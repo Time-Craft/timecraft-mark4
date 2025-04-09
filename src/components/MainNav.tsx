@@ -1,3 +1,4 @@
+
 import { Link, useLocation } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Home, Search, Plus, User, Trophy, LogOut } from "lucide-react"
@@ -52,7 +53,7 @@ const MainNav = () => {
                   isActive('/offer') ? 'text-teal bg-mint/10' : 'text-navy hover:text-teal hover:bg-mint/10'
                 }`}>
                   <Plus className="h-4 w-4" />
-                  New Offer
+                  New Request
                 </Button>
               </Link>
               <Link to="/challenges">

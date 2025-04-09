@@ -8,15 +8,31 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import OfferCard from "@/components/explore/OfferCard"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const Profile = () => {
   const navigate = useNavigate()
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const [userId, setUserId] = useState<string | null>(null)
+
+  // First fetch the user ID
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const { data } = await supabase.auth.getUser()
+      if (data?.user?.id) {
+        setUserId(data.user.id)
+      }
+    }
+    
+    fetchUserId()
+  }, [])
 
   // Profile subscription
   useEffect(() => {
+    if (!userId) return
+
     const channel = supabase
       .channel('profile-changes')
       .on(
@@ -24,52 +40,116 @@ const Profile = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'profiles'
+          table: 'profiles',
+          filter: `id=eq.${userId}`
         },
-        (payload) => {
-          console.log('Profile update received:', payload)
-          queryClient.invalidateQueries({ queryKey: ['profile'] })
+        () => {
+          console.log('Profile update received')
+          queryClient.invalidateQueries({ queryKey: ['profile', userId] })
+        }
+      )
+      .subscribe()
+
+    // Add subscription to time_balances table
+    const timeBalanceChannel = supabase
+      .channel('profile-time-balance-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'time_balances',
+          filter: `user_id=eq.${userId}`
+        },
+        () => {
+          console.log('Time balance update received on profile page')
+          queryClient.invalidateQueries({ queryKey: ['time-balance', userId] })
+        }
+      )
+      .subscribe()
+
+    // Add subscription to offers table to update for any offer changes
+    const offersChannel = supabase
+      .channel('profile-offers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'offers',
+          filter: `profile_id=eq.${userId}`
+        },
+        () => {
+          console.log('Offers update received on profile page')
+          queryClient.invalidateQueries({ queryKey: ['user-offers', userId] })
+          queryClient.invalidateQueries({ queryKey: ['time-balance', userId] })
         }
       )
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
+      supabase.removeChannel(timeBalanceChannel)
+      supabase.removeChannel(offersChannel)
     }
-  }, [queryClient])
+  }, [queryClient, userId])
 
-  const { data: profile } = useQuery({
-    queryKey: ['profile'],
+  const { data: profile, isLoading: profileLoading } = useQuery({
+    queryKey: ['profile', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("No user found")
+      if (!userId) return null
 
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single()
 
       if (error) throw error
       return data
-    }
+    },
+    enabled: !!userId
   })
 
-  const { data: userOffers } = useQuery({
-    queryKey: ['user-offers'],
+  // Add query to fetch time balance
+  const { data: timeBalance, isLoading: timeBalanceLoading } = useQuery({
+    queryKey: ['time-balance', userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("No user found")
+      if (!userId) return null
+
+      console.log('Fetching time balance for user on Profile page:', userId)
+      const { data, error } = await supabase
+        .from('time_balances')
+        .select('balance')
+        .eq('user_id', userId)
+        .single()
+
+      if (error) {
+        console.error('Error fetching time balance on Profile page:', error)
+        throw error
+      }
+      
+      console.log('Time balance data on Profile page:', data)
+      return data
+    },
+    enabled: !!userId
+  })
+
+  const { data: userOffers, isLoading: userOffersLoading } = useQuery({
+    queryKey: ['user-offers', userId],
+    queryFn: async () => {
+      if (!userId) return null
 
       const { data, error } = await supabase
         .from('offers')
         .select('*')
-        .eq('profile_id', user.id)
+        .eq('profile_id', userId)
         .order('created_at', { ascending: false })
 
       if (error) throw error
       return data
-    }
+    },
+    enabled: !!userId
   })
 
   const handleLogout = async () => {
@@ -92,28 +172,66 @@ const Profile = () => {
     }
   }
 
+  if (!userId) {
+    return (
+      <div className="container mx-auto p-4 space-y-6 max-w-2xl">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl md:text-4xl font-bold">Profile</h1>
+        </div>
+        <Card>
+          <CardContent className="p-8">
+            <div className="flex justify-center">
+              <Skeleton className="h-32 w-32 rounded-full" />
+            </div>
+            <div className="space-y-2 mt-4">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-6 w-3/4" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="container mx-auto p-4 space-y-6 max-w-2xl">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl md:text-4xl font-bold">Profile</h1>
-        <Button variant="outline" onClick={handleLogout}>
-          Logout
-        </Button>
+        <div className="flex items-center gap-4">
+          {timeBalanceLoading ? (
+            <Skeleton className="h-6 w-24" />
+          ) : (
+            <div className="text-sm font-medium">
+              <span className="text-teal">{timeBalance?.balance || 0}</span> credits available
+            </div>
+          )}
+          <Button variant="outline" onClick={handleLogout}>
+            Logout
+          </Button>
+        </div>
       </div>
       
       <Card>
         <CardHeader>
           <div className="flex items-center space-x-4">
-            <Avatar className="h-16 w-16 md:h-20 md:w-20">
-              <AvatarImage src={profile?.avatar_url || "/placeholder.svg"} />
-              <AvatarFallback>
-                {profile?.username?.substring(0, 2).toUpperCase() || 'UN'}
-              </AvatarFallback>
-            </Avatar>
+            {profileLoading ? (
+              <Skeleton className="h-16 w-16 md:h-20 md:w-20 rounded-full" />
+            ) : (
+              <Avatar className="h-16 w-16 md:h-20 md:w-20">
+                <AvatarImage src={profile?.avatar_url || "/placeholder.svg"} />
+                <AvatarFallback>
+                  {profile?.username?.substring(0, 2).toUpperCase() || 'UN'}
+                </AvatarFallback>
+              </Avatar>
+            )}
             <div>
-              <CardTitle className="text-xl md:text-2xl">
-                {profile?.username || 'Username not set'}
-              </CardTitle>
+              {profileLoading ? (
+                <Skeleton className="h-8 w-40" />
+              ) : (
+                <CardTitle className="text-xl md:text-2xl">
+                  {profile?.username || 'Username not set'}
+                </CardTitle>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -121,16 +239,24 @@ const Profile = () => {
           <div className="space-y-4">
             <div>
               <h3 className="text-sm font-medium mb-2">Interests</h3>
-              <div className="flex flex-wrap gap-2">
-                {profile?.services?.map((service: string) => (
-                  <span
-                    key={service}
-                    className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-secondary text-secondary-foreground"
-                  >
-                    {service}
-                  </span>
-                ))}
-              </div>
+              {profileLoading ? (
+                <div className="flex flex-wrap gap-2">
+                  <Skeleton className="h-8 w-24" />
+                  <Skeleton className="h-8 w-20" />
+                  <Skeleton className="h-8 w-32" />
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {profile?.services?.map((service: string) => (
+                    <span
+                      key={service}
+                      className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-secondary text-secondary-foreground"
+                    >
+                      {service}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
@@ -139,18 +265,27 @@ const Profile = () => {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>My Offers</CardTitle>
-            <Button size="sm" onClick={() => navigate('/offer')}>
+            <CardTitle>My Requests</CardTitle>
+            <Button 
+              size="sm" 
+              onClick={() => navigate('/offer')}
+              disabled={timeBalanceLoading || (timeBalance?.balance || 0) <= 0}
+            >
               <Plus className="h-4 w-4 mr-1" />
-              New Offer
+              New Request
             </Button>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {userOffers?.length === 0 ? (
+            {userOffersLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-36 w-full" />
+                <Skeleton className="h-36 w-full" />
+              </div>
+            ) : userOffers?.length === 0 ? (
               <p className="text-center text-muted-foreground">
-                You haven't created any offers yet
+                You haven't created any requests yet
               </p>
             ) : (
               userOffers?.map((offer) => (

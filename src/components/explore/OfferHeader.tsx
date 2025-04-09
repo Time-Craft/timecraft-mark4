@@ -1,6 +1,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Clock, Coins } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 
 interface OfferHeaderProps {
   user: {
@@ -9,7 +10,7 @@ interface OfferHeaderProps {
   }
   title: string
   hours: number
-  timeCredits?: number // Add optional timeCredits property
+  timeCredits?: number 
 }
 
 const OfferHeader = ({ user, title, hours, timeCredits }: OfferHeaderProps) => {
@@ -17,6 +18,9 @@ const OfferHeader = ({ user, title, hours, timeCredits }: OfferHeaderProps) => {
   const formattedHours = hours === 1 ? "1h" : 
                          Number.isInteger(hours) ? `${hours}h` : 
                          `${hours.toFixed(1)}h`;
+
+  // Calculate the displayed credits (if not provided, use hours)
+  const displayedCredits = timeCredits !== undefined ? timeCredits : hours;
 
   return (
     <div className="flex items-start justify-between">
@@ -35,9 +39,11 @@ const OfferHeader = ({ user, title, hours, timeCredits }: OfferHeaderProps) => {
           <Clock className="mr-2 h-4 w-4" />
           <span>Duration: {formattedHours}</span>
         </div>
-        <div className="flex items-center text-muted-foreground">
-          <Coins className="mr-2 h-4 w-4" />
-          <span>Credits: {timeCredits !== undefined ? timeCredits : hours} TC</span>
+        <div className="flex items-center">
+          <Coins className="mr-2 h-4 w-4 text-amber-500" />
+          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+            {displayedCredits} {displayedCredits === 1 ? 'Credit' : 'Credits'}
+          </Badge>
         </div>
       </div>
     </div>
