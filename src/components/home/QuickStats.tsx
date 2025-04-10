@@ -61,6 +61,7 @@ const QuickStats = () => {
           console.log('Offers update received')
           queryClient.invalidateQueries({ queryKey: ['user-stats', userId] })
           queryClient.invalidateQueries({ queryKey: ['time-balance', userId] })
+          queryClient.invalidateQueries({ queryKey: ['user-offers', userId] })
         }
       )
       .subscribe()
@@ -89,29 +90,37 @@ const QuickStats = () => {
     enabled: !!userId // Only run query when userId is available
   })
 
-  // Get time balance from the time_balances table
-  const { data: timeBalance, isLoading: timeBalanceLoading } = useQuery({
-    queryKey: ['time-balance', userId],
+  // Get user's offers to calculate credits used
+  const { data: userOffers, isLoading: userOffersLoading } = useQuery({
+    queryKey: ['user-offers', userId],
     queryFn: async () => {
       if (!userId) return null
       
-      console.log('Fetching time balance for user:', userId)
       const { data, error } = await supabase
-        .from('time_balances')
-        .select('balance')
-        .eq('user_id', userId)
-        .single()
-
-      if (error) {
-        console.error('Error fetching time balance:', error)
-        throw error
-      }
+        .from('offers')
+        .select('time_credits')
+        .eq('profile_id', userId)
       
-      console.log('Time balance data:', data)
+      if (error) throw error
       return data
     },
-    enabled: !!userId // Only run query when userId is available
+    enabled: !!userId
   })
+
+  // Calculate available time balance based on offers
+  const calculateTimeBalance = () => {
+    const INITIAL_CREDITS = 30;
+    
+    if (userOffersLoading || !userOffers) {
+      return INITIAL_CREDITS;
+    }
+    
+    // Sum up all credits used in offers
+    const usedCredits = userOffers.reduce((sum, offer) => 
+      sum + (offer.time_credits || 0), 0);
+    
+    return INITIAL_CREDITS - usedCredits;
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -123,10 +132,10 @@ const QuickStats = () => {
         <CardContent>
           <div className="flex items-center justify-between">
             <div className="text-2xl font-bold text-navy">
-              {timeBalanceLoading ? (
+              {userOffersLoading ? (
                 <Skeleton className="h-8 w-20" />
               ) : (
-                `${timeBalance?.balance || 0} credits`
+                `${calculateTimeBalance()} credits`
               )}
             </div>
             <Badge variant="outline" className="bg-teal/10 text-teal">Available</Badge>

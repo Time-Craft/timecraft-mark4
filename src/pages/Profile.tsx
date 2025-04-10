@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -17,7 +16,6 @@ const Profile = () => {
   const queryClient = useQueryClient()
   const [userId, setUserId] = useState<string | null>(null)
 
-  // First fetch the user ID
   useEffect(() => {
     const fetchUserId = async () => {
       const { data } = await supabase.auth.getUser()
@@ -29,7 +27,6 @@ const Profile = () => {
     fetchUserId()
   }, [])
 
-  // Profile subscription
   useEffect(() => {
     if (!userId) return
 
@@ -50,7 +47,6 @@ const Profile = () => {
       )
       .subscribe()
 
-    // Add subscription to time_balances table
     const timeBalanceChannel = supabase
       .channel('profile-time-balance-changes')
       .on(
@@ -68,7 +64,6 @@ const Profile = () => {
       )
       .subscribe()
 
-    // Add subscription to offers table to update for any offer changes
     const offersChannel = supabase
       .channel('profile-offers-changes')
       .on(
@@ -111,30 +106,6 @@ const Profile = () => {
     enabled: !!userId
   })
 
-  // Add query to fetch time balance
-  const { data: timeBalance, isLoading: timeBalanceLoading } = useQuery({
-    queryKey: ['time-balance', userId],
-    queryFn: async () => {
-      if (!userId) return null
-
-      console.log('Fetching time balance for user on Profile page:', userId)
-      const { data, error } = await supabase
-        .from('time_balances')
-        .select('balance')
-        .eq('user_id', userId)
-        .single()
-
-      if (error) {
-        console.error('Error fetching time balance on Profile page:', error)
-        throw error
-      }
-      
-      console.log('Time balance data on Profile page:', data)
-      return data
-    },
-    enabled: !!userId
-  })
-
   const { data: userOffers, isLoading: userOffersLoading } = useQuery({
     queryKey: ['user-offers', userId],
     queryFn: async () => {
@@ -147,10 +118,24 @@ const Profile = () => {
         .order('created_at', { ascending: false })
 
       if (error) throw error
+      console.log('User offers in profile page:', data)
       return data
     },
     enabled: !!userId
   })
+
+  const calculateTimeBalance = () => {
+    const INITIAL_CREDITS = 30;
+    
+    if (userOffersLoading || !userOffers) {
+      return INITIAL_CREDITS;
+    }
+    
+    const usedCredits = userOffers.reduce((sum, offer) => 
+      sum + (offer.time_credits || 0), 0);
+    
+    return INITIAL_CREDITS - usedCredits;
+  }
 
   const handleLogout = async () => {
     try {
@@ -198,11 +183,11 @@ const Profile = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl md:text-4xl font-bold">Profile</h1>
         <div className="flex items-center gap-4">
-          {timeBalanceLoading ? (
+          {userOffersLoading ? (
             <Skeleton className="h-6 w-24" />
           ) : (
             <div className="text-sm font-medium">
-              <span className="text-teal">{timeBalance?.balance || 0}</span> credits available
+              <span className="text-teal">{calculateTimeBalance()}</span> credits available
             </div>
           )}
           <Button variant="outline" onClick={handleLogout}>
@@ -269,7 +254,7 @@ const Profile = () => {
             <Button 
               size="sm" 
               onClick={() => navigate('/offer')}
-              disabled={timeBalanceLoading || (timeBalance?.balance || 0) <= 0}
+              disabled={userOffersLoading || calculateTimeBalance() <= 0}
             >
               <Plus className="h-4 w-4 mr-1" />
               New Request
@@ -293,6 +278,7 @@ const Profile = () => {
                   key={offer.id} 
                   offer={{
                     ...offer,
+                    timeCredits: offer.time_credits,
                     user: {
                       id: offer.profile_id,
                       name: profile?.username || 'Unknown',

@@ -7,7 +7,7 @@ interface PendingOffer {
   title: string
   description: string
   hours: number
-  timeCredits?: number // Added this field
+  timeCredits?: number
   user: {
     id: string
     name: string
@@ -68,7 +68,7 @@ export const usePendingOffers = () => {
         title: offer.title,
         description: offer.description,
         hours: offer.hours,
-        timeCredits: offer.time_credits || offer.hours, // Use time_credits or fallback to hours
+        timeCredits: offer.time_credits,
         status: offer.status,
         isApplied: false,
         user: {
@@ -86,7 +86,7 @@ export const usePendingOffers = () => {
           title: offer.title,
           description: offer.description,
           hours: offer.hours,
-          timeCredits: offer.time_credits || offer.hours, // Use time_credits or fallback to hours
+          timeCredits: offer.time_credits,
           status: offer.status,
           isApplied: true,
           applicationStatus: application.status,

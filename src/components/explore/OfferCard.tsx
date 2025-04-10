@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import OfferHeader from "./OfferHeader"
@@ -8,7 +7,7 @@ import { useApplicationManagement } from "@/hooks/useApplicationManagement"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
-import { useOfferManagement } from "@/hooks/useOfferManagement"
+import { useDeleteOffer } from "@/hooks/useDeleteOffer"
 
 interface OfferCardProps {
   offer: {
@@ -34,7 +33,7 @@ interface OfferCardProps {
 const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const { deleteOffer, isDeleting } = useOfferManagement()
+  const { deleteOffer, isDeleting } = useDeleteOffer()
   const { 
     applyToOffer, 
     applications, 
@@ -59,7 +58,6 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
     try {
       await deleteOffer(offer.id)
       
-      // Optimistically remove the offer from both queries
       queryClient.setQueryData(['offers'], (old: any) => 
         old?.filter((o: any) => o.id !== offer.id) || []
       )
@@ -81,7 +79,6 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
   }
 
   const renderApplyButton = () => {
-    // If this is an offer the user has already applied to (coming from the applications list)
     if (offer.isApplied) {
       const statusColorClass = offer.applicationStatus === 'pending' 
         ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
@@ -103,7 +100,6 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
       );
     }
 
-    // For regular offers that the user might want to apply to
     if (userApplication) {
       const statusColorClass = userApplication.status === 'pending' 
         ? 'bg-yellow-100 text-yellow-800 border-yellow-300'

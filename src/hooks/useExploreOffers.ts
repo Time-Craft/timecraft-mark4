@@ -9,7 +9,7 @@ interface Offer {
   title: string
   description: string
   hours: number
-  time_credits?: number // Added this field
+  timeCredits?: number
   service_type: string 
   user: {
     id: string
@@ -54,12 +54,15 @@ export const useExploreOffers = () => {
       const { data, error } = await query
       if (error) throw error
 
+      // Debug log to verify time_credits is coming from the database
+      console.log('Offers from database:', data)
+
       return data.map(offer => ({
         id: offer.id,
         title: offer.title,
         description: offer.description,
         hours: offer.hours,
-        timeCredits: offer.time_credits || offer.hours, // Use time_credits or fallback to hours
+        timeCredits: offer.time_credits,
         status: offer.status,
         service_type: offer.service_type || offer.status,
         accepted_by: [],

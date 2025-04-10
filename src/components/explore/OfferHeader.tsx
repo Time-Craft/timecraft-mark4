@@ -19,9 +19,6 @@ const OfferHeader = ({ user, title, hours, timeCredits }: OfferHeaderProps) => {
                          Number.isInteger(hours) ? `${hours}h` : 
                          `${hours.toFixed(1)}h`;
 
-  // Calculate the displayed credits (if not provided, use hours)
-  const displayedCredits = timeCredits !== undefined ? timeCredits : hours;
-
   return (
     <div className="flex items-start justify-between">
       <div className="flex items-center space-x-4">
@@ -39,12 +36,14 @@ const OfferHeader = ({ user, title, hours, timeCredits }: OfferHeaderProps) => {
           <Clock className="mr-2 h-4 w-4" />
           <span>Duration: {formattedHours}</span>
         </div>
-        <div className="flex items-center">
-          <Coins className="mr-2 h-4 w-4 text-amber-500" />
-          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-            {displayedCredits} {displayedCredits === 1 ? 'Credit' : 'Credits'}
-          </Badge>
-        </div>
+        {timeCredits !== undefined && (
+          <div className="flex items-center">
+            <Coins className="mr-2 h-4 w-4 text-amber-500" />
+            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+              {timeCredits} {timeCredits === 1 ? 'Credit' : 'Credits'}
+            </Badge>
+          </div>
+        )}
       </div>
     </div>
   )
