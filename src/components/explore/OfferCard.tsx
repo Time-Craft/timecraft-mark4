@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import OfferHeader from "./OfferHeader"
@@ -14,7 +15,7 @@ interface OfferCardProps {
     id: string
     title: string
     description: string
-    hours: number
+    hours?: number
     timeCredits?: number
     user: {
       id: string
@@ -80,9 +81,10 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
 
   const renderApplyButton = () => {
     if (offer.isApplied) {
-      const statusColorClass = offer.applicationStatus === 'pending' 
+      const applicationStatus = offer.applicationStatus || 'pending';
+      const statusColorClass = applicationStatus === 'pending' 
         ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
-        : offer.applicationStatus === 'accepted'
+        : applicationStatus === 'accepted'
           ? 'bg-green-100 text-green-800 border-green-300'
           : 'bg-red-100 text-red-800 border-red-300';
         
@@ -93,8 +95,8 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
           className={`w-full md:w-auto mt-4 md:mt-0 ${statusColorClass}`}
         >
           <Hourglass className="h-4 w-4 mr-1" />
-          {offer.applicationStatus === 'pending' ? 'Application Pending' : 
-            offer.applicationStatus === 'accepted' ? 'Application Accepted' : 
+          {applicationStatus === 'pending' ? 'Application Pending' : 
+            applicationStatus === 'accepted' ? 'Application Accepted' : 
             'Application Rejected'}
         </Button>
       );
@@ -144,7 +146,7 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
         />
         <p className="mt-2 text-navy/80">{offer.description}</p>
         <div className="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <OfferStatus status={offer.status} />
+          <OfferStatus status={offer.status || 'unknown'} />
           <div className="flex flex-col md:flex-row gap-2 md:items-center">
             {isOwner && (
               <Button
@@ -167,7 +169,7 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
             <div className="space-y-2">
               {applications.map((application: any) => (
                 <div key={application.id} className="flex flex-col md:flex-row md:items-center justify-between gap-2 bg-mint/10 p-3 rounded-lg">
-                  <span className="text-navy">{application.profiles.username}</span>
+                  <span className="text-navy">{application.profiles?.username || 'Unknown User'}</span>
                   {application.status === 'pending' && (
                     <div className="flex space-x-2">
                       <Button 

@@ -9,15 +9,19 @@ interface OfferHeaderProps {
     avatar: string
   }
   title: string
-  hours: number
+  hours: number | undefined
   timeCredits?: number 
 }
 
 const OfferHeader = ({ user, title, hours, timeCredits }: OfferHeaderProps) => {
-  // Format hours to handle decimal values correctly
-  const formattedHours = hours === 1 ? "1h" : 
-                         Number.isInteger(hours) ? `${hours}h` : 
-                         `${hours.toFixed(1)}h`;
+  // Format hours to handle decimal values correctly, with null/undefined check
+  const formattedHours = !hours 
+    ? "0h"
+    : hours === 1 
+      ? "1h" 
+      : Number.isInteger(hours) 
+        ? `${hours}h` 
+        : `${hours.toFixed(1)}h`;
 
   return (
     <div className="flex items-start justify-between">
