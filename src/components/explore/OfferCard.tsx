@@ -79,6 +79,21 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
     }
   }
 
+  const handleUpdateStatus = async (applicationId: string, status: 'accepted' | 'rejected') => {
+    try {
+      await updateApplicationStatus({ 
+        applicationId, 
+        status 
+      })
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to ${status} application: ${error.message}`,
+      })
+    }
+  }
+
   const renderApplyButton = () => {
     if (offer.isApplied) {
       const applicationStatus = offer.applicationStatus || 'pending';
@@ -175,10 +190,7 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
                       <Button 
                         size="sm" 
                         variant="default"
-                        onClick={() => updateApplicationStatus({ 
-                          applicationId: application.id, 
-                          status: 'accepted' 
-                        })}
+                        onClick={() => handleUpdateStatus(application.id, 'accepted')}
                         disabled={isUpdating}
                         className="bg-teal hover:bg-teal/90 text-cream"
                       >
@@ -187,10 +199,7 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
                       <Button 
                         size="sm" 
                         variant="destructive"
-                        onClick={() => updateApplicationStatus({ 
-                          applicationId: application.id, 
-                          status: 'rejected' 
-                        })}
+                        onClick={() => handleUpdateStatus(application.id, 'rejected')}
                         disabled={isUpdating}
                       >
                         <X className="h-4 w-4" />

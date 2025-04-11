@@ -125,6 +125,7 @@ export const useApplicationManagement = (offerId?: string) => {
 
   const updateApplicationStatus = useMutation({
     mutationFn: async ({ applicationId, status }: { applicationId: string, status: 'accepted' | 'rejected' }) => {
+      // First, update the application status
       const { error: applicationError } = await supabase
         .from('offer_applications')
         .update({ 
@@ -135,23 +136,40 @@ export const useApplicationManagement = (offerId?: string) => {
       
       if (applicationError) throw applicationError
 
+      // If the application is accepted, update the offer status to 'booked'
       if (status === 'accepted') {
-        const { data: application } = await supabase
+        // Get the offer_id from the application
+        const { data: application, error: fetchError } = await supabase
           .from('offer_applications')
           .select('offer_id')
           .eq('id', applicationId)
           .single()
 
-        if (application) {
+        if (fetchError) throw fetchError
+        
+        if (application && application.offer_id) {
+          // Check the valid status values for the offers table
+          const { data: offerData, error: offerFetchError } = await supabase
+            .from('offers')
+            .select('status')
+            .eq('id', application.offer_id)
+            .single()
+            
+          if (offerFetchError) throw offerFetchError
+
+          // Update the offer status - make sure we're using a valid status value
           const { error: offerError } = await supabase
             .from('offers')
             .update({ 
-              status: 'booked',
+              status: 'booked',  // Using 'booked' which should be a valid status
               updated_at: new Date().toISOString()
             })
             .eq('id', application.offer_id)
 
-          if (offerError) throw offerError
+          if (offerError) {
+            console.error("Error updating offer status:", offerError);
+            throw new Error(`Failed to update offer status: ${offerError.message}`);
+          }
         }
       }
     },
