@@ -184,6 +184,8 @@ export type Database = {
           created_at: string
           hours: number
           id: string
+          offer_id: string | null
+          provider_id: string | null
           rating: number | null
           service: string
           user_id: string
@@ -192,6 +194,8 @@ export type Database = {
           created_at?: string
           hours: number
           id?: string
+          offer_id?: string | null
+          provider_id?: string | null
           rating?: number | null
           service: string
           user_id: string
@@ -200,6 +204,8 @@ export type Database = {
           created_at?: string
           hours?: number
           id?: string
+          offer_id?: string | null
+          provider_id?: string | null
           rating?: number | null
           service?: string
           user_id?: string

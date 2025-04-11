@@ -1,14 +1,14 @@
-
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import OfferHeader from "./OfferHeader"
 import OfferStatus from "./OfferStatus"
-import { Check, Hourglass, X, Trash2 } from "lucide-react"
+import { Check, Hourglass, X, Trash2, CheckCircle2 } from "lucide-react"
 import { useApplicationManagement } from "@/hooks/useApplicationManagement"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 import { useDeleteOffer } from "@/hooks/useDeleteOffer"
+import { useCompleteOffer } from "@/hooks/useCompleteOffer"
 
 interface OfferCardProps {
   offer: {
@@ -35,6 +35,7 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const { deleteOffer, isDeleting } = useDeleteOffer()
+  const { completeOffer, isCompleting } = useCompleteOffer()
   const { 
     applyToOffer, 
     applications, 
@@ -75,6 +76,22 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
         variant: "destructive",
         title: "Error",
         description: "Failed to delete offer: " + error.message,
+      })
+    }
+  }
+
+  const handleComplete = async () => {
+    try {
+      await completeOffer(offer.id)
+      toast({
+        title: "Success",
+        description: "Offer marked as completed and credits transferred",
+      })
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to complete offer: ${error.message}`,
       })
     }
   }
@@ -150,6 +167,8 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
     )
   }
 
+  const hasAcceptedApplication = applications?.some(app => app.status === 'accepted')
+
   return (
     <Card className="gradient-border card-hover">
       <CardContent className="p-6">
@@ -164,15 +183,29 @@ const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
           <OfferStatus status={offer.status || 'unknown'} />
           <div className="flex flex-col md:flex-row gap-2 md:items-center">
             {isOwner && (
-              <Button
-                onClick={handleDelete}
-                variant="destructive"
-                disabled={isDeleting}
-                className="w-full md:w-auto flex items-center justify-center"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
+              <>
+                {offer.status === 'booked' && hasAcceptedApplication ? (
+                  <Button
+                    onClick={handleComplete}
+                    variant="default"
+                    disabled={isCompleting}
+                    className="w-full md:w-auto flex items-center justify-center bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Mark as Done
+                  </Button>
+                ) : offer.status !== 'completed' && (
+                  <Button
+                    onClick={handleDelete}
+                    variant="destructive"
+                    disabled={isDeleting}
+                    className="w-full md:w-auto flex items-center justify-center"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                )}
+              </>
             )}
             {!isOwner && renderApplyButton()}
           </div>

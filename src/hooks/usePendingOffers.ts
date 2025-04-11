@@ -28,7 +28,7 @@ export const usePendingOffers = () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // Get pending offers
+      // Get pending and booked offers (we now include booked as well)
       const { data: pendingOffersData, error: pendingError } = await supabase
         .from('offers')
         .select(`
@@ -39,7 +39,7 @@ export const usePendingOffers = () => {
             avatar_url
           )
         `)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'booked'])
         .eq('profile_id', user.id)
       
       if (pendingError) throw pendingError
@@ -114,6 +114,8 @@ export const usePendingOffers = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
+      queryClient.invalidateQueries({ queryKey: ['time-balance'] })
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] })
     }
   })
 
