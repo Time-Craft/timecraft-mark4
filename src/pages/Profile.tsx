@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -9,6 +10,8 @@ import { useNavigate } from "react-router-dom"
 import OfferCard from "@/components/explore/OfferCard"
 import { useEffect, useState } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import CompletedOffers from "@/components/profile/CompletedOffers"
 
 const Profile = () => {
   const navigate = useNavigate()
@@ -78,6 +81,23 @@ const Profile = () => {
           console.log('Offers update received on profile page')
           queryClient.invalidateQueries({ queryKey: ['user-offers', userId] })
           queryClient.invalidateQueries({ queryKey: ['time-balance', userId] })
+          queryClient.invalidateQueries({ queryKey: ['completed-offers', userId] })
+        }
+      )
+      .subscribe()
+      
+    const transactionsChannel = supabase
+      .channel('profile-transactions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions'
+        },
+        () => {
+          console.log('Transactions update received on profile page')
+          queryClient.invalidateQueries({ queryKey: ['completed-offers', userId] })
         }
       )
       .subscribe()
@@ -86,6 +106,7 @@ const Profile = () => {
       supabase.removeChannel(channel)
       supabase.removeChannel(timeBalanceChannel)
       supabase.removeChannel(offersChannel)
+      supabase.removeChannel(transactionsChannel)
     }
   }, [queryClient, userId])
 
@@ -249,48 +270,59 @@ const Profile = () => {
 
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>My Requests</CardTitle>
-            <Button 
-              size="sm" 
-              onClick={() => navigate('/offer')}
-              disabled={userOffersLoading || calculateTimeBalance() <= 0}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              New Request
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {userOffersLoading ? (
+          <Tabs defaultValue="requests">
+            <div className="flex justify-between items-center mb-4">
+              <TabsList>
+                <TabsTrigger value="requests">My Requests</TabsTrigger>
+                <TabsTrigger value="completed">Completed</TabsTrigger>
+              </TabsList>
+              
+              <Button 
+                size="sm" 
+                onClick={() => navigate('/offer')}
+                disabled={userOffersLoading || calculateTimeBalance() <= 0}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                New Request
+              </Button>
+            </div>
+            
+            <TabsContent value="requests">
               <div className="space-y-4">
-                <Skeleton className="h-36 w-full" />
-                <Skeleton className="h-36 w-full" />
+                {userOffersLoading ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-36 w-full" />
+                    <Skeleton className="h-36 w-full" />
+                  </div>
+                ) : userOffers?.length === 0 ? (
+                  <p className="text-center text-muted-foreground">
+                    You haven't created any requests yet
+                  </p>
+                ) : (
+                  userOffers?.map((offer) => (
+                    <OfferCard 
+                      key={offer.id} 
+                      offer={{
+                        ...offer,
+                        timeCredits: offer.time_credits,
+                        user: {
+                          id: offer.profile_id,
+                          name: profile?.username || 'Unknown',
+                          avatar: profile?.avatar_url || '/placeholder.svg'
+                        }
+                      }}
+                      showApplications={true}
+                    />
+                  ))
+                )}
               </div>
-            ) : userOffers?.length === 0 ? (
-              <p className="text-center text-muted-foreground">
-                You haven't created any requests yet
-              </p>
-            ) : (
-              userOffers?.map((offer) => (
-                <OfferCard 
-                  key={offer.id} 
-                  offer={{
-                    ...offer,
-                    timeCredits: offer.time_credits,
-                    user: {
-                      id: offer.profile_id,
-                      name: profile?.username || 'Unknown',
-                      avatar: profile?.avatar_url || '/placeholder.svg'
-                    }
-                  }}
-                  showApplications={true}
-                />
-              ))
-            )}
-          </div>
-        </CardContent>
+            </TabsContent>
+            
+            <TabsContent value="completed">
+              <CompletedOffers userId={userId} username={profile?.username} avatar={profile?.avatar_url} />
+            </TabsContent>
+          </Tabs>
+        </CardHeader>
       </Card>
     </div>
   )
