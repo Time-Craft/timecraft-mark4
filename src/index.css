@@ -86,4 +86,12 @@
   .card-hover {
     @apply hover:shadow-lg transition-shadow duration-200 hover:shadow-mint/5;
   }
+  
+  .glass-card {
+    @apply bg-white/70 backdrop-blur-sm border border-white/20 shadow-lg;
+  }
+  
+  .gradient-bg {
+    @apply bg-gradient-to-br from-white to-mint/10;
+  }
 }
