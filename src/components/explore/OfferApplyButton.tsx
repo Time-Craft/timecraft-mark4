@@ -1,8 +1,10 @@
+
 import { Button } from "@/components/ui/button"
 import { Check, Gift, Hourglass } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/hooks/use-toast"
+import { useState } from "react"
 
 interface OfferApplyButtonProps {
   offerId: string
@@ -25,9 +27,12 @@ const OfferApplyButton = ({
 }: OfferApplyButtonProps) => {
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const [isClaiming, setIsClaiming] = useState(false)
 
   const handleClaim = async () => {
     try {
+      setIsClaiming(true)
+      
       const { error } = await supabase
         .from('transactions')
         .update({ claimed: true })
@@ -49,6 +54,8 @@ const OfferApplyButton = ({
         title: "Error",
         description: "Failed to claim credits: " + error.message,
       })
+    } finally {
+      setIsClaiming(false)
     }
   }
   
@@ -59,6 +66,7 @@ const OfferApplyButton = ({
       return (
         <Button 
           onClick={handleClaim}
+          disabled={isClaiming}
           className="w-full md:w-auto mt-4 md:mt-0 bg-green-500 hover:bg-green-600 text-white"
         >
           <Gift className="h-4 w-4 mr-1" />
@@ -88,6 +96,19 @@ const OfferApplyButton = ({
   }
 
   if (userApplication) {
+    if (status === 'completed') {
+      return (
+        <Button 
+          onClick={handleClaim}
+          disabled={isClaiming}
+          className="w-full md:w-auto mt-4 md:mt-0 bg-green-500 hover:bg-green-600 text-white"
+        >
+          <Gift className="h-4 w-4 mr-1" />
+          Claim Credits
+        </Button>
+      )
+    }
+    
     const statusColorClass = userApplication.status === 'pending' 
       ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
       : userApplication.status === 'accepted'
