@@ -105,12 +105,14 @@ const PendingOffers = () => {
             <div>
               <h3 className="text-lg font-semibold mb-3">My Applications</h3>
               <div className="space-y-4">
-                {appliedOffers.map((offer) => (
-                  <OfferCard 
-                    key={offer.id}
-                    offer={offer}
-                  />
-                ))}
+                {appliedOffers
+                  .filter(offer => offer.status !== 'completed')
+                  .map((offer) => (
+                    <OfferCard 
+                      key={offer.id}
+                      offer={offer}
+                    />
+                  ))}
               </div>
             </div>
           )}

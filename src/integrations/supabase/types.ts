@@ -181,6 +181,7 @@ export type Database = {
       }
       transactions: {
         Row: {
+          claimed: boolean | null
           created_at: string
           hours: number
           id: string
@@ -191,6 +192,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          claimed?: boolean | null
           created_at?: string
           hours: number
           id?: string
@@ -201,6 +203,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          claimed?: boolean | null
           created_at?: string
           hours?: number
           id?: string

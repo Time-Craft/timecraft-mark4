@@ -145,6 +145,9 @@ const Profile = () => {
     enabled: !!userId
   })
 
+  // Filter out completed offers for the My Requests tab
+  const activeUserOffers = userOffers?.filter(offer => offer.status !== 'completed') || []
+
   const calculateTimeBalance = () => {
     const INITIAL_CREDITS = 30;
     
@@ -294,12 +297,12 @@ const Profile = () => {
                     <Skeleton className="h-36 w-full" />
                     <Skeleton className="h-36 w-full" />
                   </div>
-                ) : userOffers?.length === 0 ? (
+                ) : activeUserOffers.length === 0 ? (
                   <p className="text-center text-muted-foreground">
-                    You haven't created any requests yet
+                    You haven't created any active requests yet
                   </p>
                 ) : (
-                  userOffers?.map((offer) => (
+                  activeUserOffers.map((offer) => (
                     <OfferCard 
                       key={offer.id} 
                       offer={{

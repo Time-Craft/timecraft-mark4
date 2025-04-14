@@ -15,7 +15,7 @@ export const useCompleteOffer = () => {
       // First get the offer to verify ownership and get details
       const { data: offer, error: offerError } = await supabase
         .from('offers')
-        .select('profile_id, time_credits, service_type')
+        .select('profile_id, time_credits, service_type, status')
         .eq('id', offerId)
         .single()
       
@@ -24,6 +24,11 @@ export const useCompleteOffer = () => {
       // Verify the current user is the offer owner
       if (offer.profile_id !== user.id) {
         throw new Error('Only the offer owner can mark it as completed')
+      }
+      
+      // Check if the offer is already completed
+      if (offer.status === 'completed') {
+        throw new Error('This offer is already marked as completed')
       }
       
       // Get the accepted applicant
