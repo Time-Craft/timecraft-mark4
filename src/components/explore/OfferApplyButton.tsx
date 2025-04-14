@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button"
 import { Check, Gift, Hourglass } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
@@ -33,24 +34,32 @@ const OfferApplyButton = ({
     try {
       setIsClaiming(true)
       
-      const { data: transaction, error: transactionError } = await supabase
+      // Use eq to find transactions for this offer
+      const { data: transactions, error: transactionError } = await supabase
         .from('transactions')
-        .select('claimed')
+        .select('claimed, id')
         .eq('offer_id', offerId)
-        .single()
 
       if (transactionError) throw transactionError
-      if (transaction?.claimed) {
-        setIsClaimed(true)
-        return
+      
+      // Check if any transactions already claimed
+      if (transactions && transactions.length > 0) {
+        const transaction = transactions[0] // Get the first transaction
+        if (transaction.claimed) {
+          setIsClaimed(true)
+          return
+        }
+        
+        // Update the specific transaction by its ID
+        const { error } = await supabase
+          .from('transactions')
+          .update({ claimed: true })
+          .eq('id', transaction.id)
+
+        if (error) throw error
+      } else {
+        throw new Error("No transaction found for this offer")
       }
-
-      const { error } = await supabase
-        .from('transactions')
-        .update({ claimed: true })
-        .eq('offer_id', offerId)
-
-      if (error) throw error
 
       setIsClaimed(true)
       
