@@ -34,43 +34,24 @@ const OfferApplyButton = ({
     try {
       setIsClaiming(true)
       
-      // Use eq to find transactions for this offer
-      const { data: transactions, error: transactionError } = await supabase
+      const { error } = await supabase
         .from('transactions')
-        .select('claimed, id')
+        .update({ claimed: true })
         .eq('offer_id', offerId)
 
-      if (transactionError) throw transactionError
-      
-      // Check if any transactions already claimed
-      if (transactions && transactions.length > 0) {
-        const transaction = transactions[0] // Get the first transaction
-        if (transaction.claimed) {
-          setIsClaimed(true)
-          return
-        }
-        
-        // Update the specific transaction by its ID
-        const { error } = await supabase
-          .from('transactions')
-          .update({ claimed: true })
-          .eq('id', transaction.id)
+      if (error) throw error
 
-        if (error) throw error
-      } else {
-        throw new Error("No transaction found for this offer")
-      }
-
-      setIsClaimed(true)
-      
       toast({
         title: "Success",
         description: "Credits have been claimed successfully!",
       })
 
+      // Set local state to show claimed status
+      setIsClaimed(true)
+
+      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
       queryClient.invalidateQueries({ queryKey: ['time-balance'] })
-      queryClient.invalidateQueries({ queryKey: ['user-stats'] })
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -82,6 +63,7 @@ const OfferApplyButton = ({
     }
   }
   
+  // Only show claim button for service providers (applicants) when the offer is completed
   if (isApplied && status === 'completed' && (applicationStatus === 'accepted' || userApplication?.status === 'accepted')) {
     return (
       <Button 
