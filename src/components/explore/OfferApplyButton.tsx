@@ -14,7 +14,6 @@ interface OfferApplyButtonProps {
   userApplication?: any
   onApply: (offerId: string) => void
   isApplying: boolean
-  timeCredits?: number
 }
 
 const OfferApplyButton = ({ 
@@ -24,8 +23,7 @@ const OfferApplyButton = ({
   applicationStatus, 
   userApplication, 
   onApply, 
-  isApplying,
-  timeCredits
+  isApplying 
 }: OfferApplyButtonProps) => {
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -36,7 +34,7 @@ const OfferApplyButton = ({
     try {
       setIsClaiming(true)
       
-      // First check if transaction exists
+      // Use eq to find transactions for this offer
       const { data: transactions, error: transactionError } = await supabase
         .from('transactions')
         .select('claimed, id')
@@ -44,72 +42,32 @@ const OfferApplyButton = ({
 
       if (transactionError) throw transactionError
       
-      // Handle case when no transactions found
-      if (!transactions || transactions.length === 0) {
-        // Create a transaction for this offer
-        const { data: userData } = await supabase.auth.getUser()
-        if (!userData.user) throw new Error("User not authenticated")
+      // Check if any transactions already claimed
+      if (transactions && transactions.length > 0) {
+        const transaction = transactions[0] // Get the first transaction
+        if (transaction.claimed) {
+          setIsClaimed(true)
+          return
+        }
         
-        // Get offer details
-        const { data: offerData, error: offerError } = await supabase
-          .from('offers')
-          .select('profile_id, time_credits, service_type')
-          .eq('id', offerId)
-          .single()
-          
-        if (offerError) throw offerError
-        
-        // Insert a new transaction
-        const { data: newTransaction, error: insertError } = await supabase
+        // Update the specific transaction by its ID
+        const { error } = await supabase
           .from('transactions')
-          .insert({
-            service: offerData.service_type || 'Time Exchange',
-            hours: offerData.time_credits || 1,
-            user_id: offerData.profile_id,  // Request owner
-            provider_id: userData.user.id,  // Service provider (current user)
-            offer_id: offerId,
-            claimed: true  // Mark as claimed directly
-          })
-          .select()
-        
-        if (insertError) throw insertError
-        
-        setIsClaimed(true)
-        toast({
-          title: "Success",
-          description: `Credits have been claimed successfully!`,
-        })
-        
-        // Update all relevant queries
-        queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
-        queryClient.invalidateQueries({ queryKey: ['time-balance'] })
-        queryClient.invalidateQueries({ queryKey: ['user-stats'] })
-        return
-      }
-      
-      // Check if transaction is already claimed
-      const transaction = transactions[0]
-      if (transaction.claimed) {
-        setIsClaimed(true)
-        return
-      }
-      
-      // Update the transaction to mark as claimed
-      const { error } = await supabase
-        .from('transactions')
-        .update({ claimed: true })
-        .eq('id', transaction.id)
+          .update({ claimed: true })
+          .eq('id', transaction.id)
 
-      if (error) throw error
+        if (error) throw error
+      } else {
+        throw new Error("No transaction found for this offer")
+      }
 
       setIsClaimed(true)
       
       toast({
         title: "Success",
-        description: `Credits have been claimed successfully!`,
+        description: "Credits have been claimed successfully!",
       })
 
-      // Update all relevant queries
       queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
       queryClient.invalidateQueries({ queryKey: ['time-balance'] })
       queryClient.invalidateQueries({ queryKey: ['user-stats'] })

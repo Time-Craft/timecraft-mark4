@@ -53,8 +53,6 @@ const PendingOffers = () => {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
-          queryClient.invalidateQueries({ queryKey: ['time-balance'] })
-          queryClient.invalidateQueries({ queryKey: ['user-stats'] })
         }
       )
       .subscribe()

@@ -66,29 +66,9 @@ const QuickStats = () => {
       )
       .subscribe()
 
-    // Set up real-time listener for transactions changes
-    const transactionsChannel = supabase
-      .channel('transactions-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'transactions',
-          filter: `provider_id=eq.${userId}`
-        },
-        () => {
-          console.log('Transactions update received')
-          queryClient.invalidateQueries({ queryKey: ['time-balance', userId] })
-          queryClient.invalidateQueries({ queryKey: ['user-stats', userId] })
-        }
-      )
-      .subscribe()
-
     return () => {
       supabase.removeChannel(timeBalanceChannel)
       supabase.removeChannel(offersChannel)
-      supabase.removeChannel(transactionsChannel)
     }
   }, [queryClient, userId])
 
@@ -105,25 +85,6 @@ const QuickStats = () => {
         .single()
 
       if (error) throw error
-      return data
-    },
-    enabled: !!userId // Only run query when userId is available
-  })
-
-  // Get time balance directly from the time_balances table
-  const { data: timeBalance, isLoading: timeBalanceLoading } = useQuery({
-    queryKey: ['time-balance', userId],
-    queryFn: async () => {
-      if (!userId) return null
-      
-      const { data, error } = await supabase
-        .from('time_balances')
-        .select('balance')
-        .eq('user_id', userId)
-        .single()
-
-      if (error) throw error
-      
       return data
     },
     enabled: !!userId // Only run query when userId is available
@@ -146,14 +107,8 @@ const QuickStats = () => {
     enabled: !!userId
   })
 
-  // Calculate available time balance
+  // Calculate available time balance based on offers
   const calculateTimeBalance = () => {
-    // Use the balance from time_balances table if available
-    if (timeBalance && !timeBalanceLoading) {
-      return timeBalance.balance;
-    }
-    
-    // Fallback to calculated balance
     const INITIAL_CREDITS = 30;
     
     if (userOffersLoading || !userOffers) {
@@ -177,7 +132,7 @@ const QuickStats = () => {
         <CardContent>
           <div className="flex items-center justify-between">
             <div className="text-2xl font-bold text-navy">
-              {timeBalanceLoading || userOffersLoading ? (
+              {userOffersLoading ? (
                 <Skeleton className="h-8 w-20" />
               ) : (
                 `${calculateTimeBalance()} credits`
