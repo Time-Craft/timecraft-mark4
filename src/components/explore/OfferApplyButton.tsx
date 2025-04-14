@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button"
 import { Check, Gift, Hourglass } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
@@ -34,6 +33,18 @@ const OfferApplyButton = ({
     try {
       setIsClaiming(true)
       
+      const { data: transaction, error: transactionError } = await supabase
+        .from('transactions')
+        .select('claimed')
+        .eq('offer_id', offerId)
+        .single()
+
+      if (transactionError) throw transactionError
+      if (transaction?.claimed) {
+        setIsClaimed(true)
+        return
+      }
+
       const { error } = await supabase
         .from('transactions')
         .update({ claimed: true })
@@ -41,17 +52,16 @@ const OfferApplyButton = ({
 
       if (error) throw error
 
+      setIsClaimed(true)
+      
       toast({
         title: "Success",
         description: "Credits have been claimed successfully!",
       })
 
-      // Set local state to show claimed status
-      setIsClaimed(true)
-
-      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
       queryClient.invalidateQueries({ queryKey: ['time-balance'] })
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] })
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -63,7 +73,6 @@ const OfferApplyButton = ({
     }
   }
   
-  // Only show claim button for service providers (applicants) when the offer is completed
   if (isApplied && status === 'completed' && (applicationStatus === 'accepted' || userApplication?.status === 'accepted')) {
     return (
       <Button 
