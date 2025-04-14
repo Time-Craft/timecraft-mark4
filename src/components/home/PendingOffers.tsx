@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { usePendingOffers } from "@/hooks/usePendingOffers"
 import OfferCard from "../explore/OfferCard"
@@ -40,10 +41,26 @@ const PendingOffers = () => {
         }
       )
       .subscribe()
+      
+    const transactionsChannel = supabase
+      .channel('transactions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
+        }
+      )
+      .subscribe()
 
     return () => {
       supabase.removeChannel(offerChannel)
       supabase.removeChannel(applicationChannel)
+      supabase.removeChannel(transactionsChannel)
     }
   }, [queryClient])
 
@@ -76,7 +93,7 @@ const PendingOffers = () => {
   }
 
   // Only show applied offers
-  const appliedOffers = pendingOffers.filter(offer => offer.isApplied)
+  const appliedOffers = pendingOffers?.filter(offer => offer.isApplied) || []
 
   return (
     <Card className="gradient-border card-hover">
@@ -85,7 +102,7 @@ const PendingOffers = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {appliedOffers.length > 0 && (
+          {appliedOffers.length > 0 ? (
             <div className="space-y-4">
               {appliedOffers.map((offer) => (
                 <OfferCard 
@@ -94,6 +111,10 @@ const PendingOffers = () => {
                 />
               ))}
             </div>
+          ) : (
+            <p className="text-center text-muted-foreground">
+              No pending applications found
+            </p>
           )}
         </div>
       </CardContent>
