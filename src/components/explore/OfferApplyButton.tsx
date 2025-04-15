@@ -14,6 +14,7 @@ interface OfferApplyButtonProps {
   userApplication?: any
   onApply: (offerId: string) => void
   isApplying: boolean
+  timeCredits?: number
 }
 
 const OfferApplyButton = ({ 
@@ -23,7 +24,8 @@ const OfferApplyButton = ({
   applicationStatus, 
   userApplication, 
   onApply, 
-  isApplying 
+  isApplying,
+  timeCredits = 1  // Default to 1 if not provided
 }: OfferApplyButtonProps) => {
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -52,6 +54,7 @@ const OfferApplyButton = ({
   const handleClaim = async () => {
     try {
       setIsClaiming(true)
+      console.log('Claiming credits:', timeCredits)
       
       // Get current user to verify they are the service provider
       const { data: { user } } = await supabase.auth.getUser()
@@ -66,13 +69,13 @@ const OfferApplyButton = ({
         
       if (fetchError) {
         // Transaction doesn't exist yet, create it
-        const { data: offer, error: offerError } = await supabase
+        const { data: offer } = await supabase
           .from('offers')
           .select('profile_id, time_credits')
           .eq('id', offerId)
           .single()
           
-        if (offerError) throw offerError
+        if (!offer) throw new Error('Offer not found')
         
         // Create a new transaction record
         const { error: createError } = await supabase
@@ -81,21 +84,24 @@ const OfferApplyButton = ({
             offer_id: offerId,
             user_id: offer.profile_id,
             provider_id: user.id,
-            hours: offer.time_credits || 1,
+            hours: timeCredits,
             service: 'Time Exchange',
             claimed: true
           })
           
         if (createError) throw createError
       } else {
-        // Transaction exists, update it
+        // Transaction exists, verify provider and update
         if (transaction.provider_id !== user.id) {
           throw new Error('You are not the service provider for this offer')
         }
         
         const { error } = await supabase
           .from('transactions')
-          .update({ claimed: true })
+          .update({ 
+            claimed: true,
+            hours: timeCredits  // Ensure we use the actual credits from the offer
+          })
           .eq('offer_id', offerId)
           
         if (error) throw error
@@ -103,7 +109,7 @@ const OfferApplyButton = ({
 
       toast({
         title: "Success",
-        description: "Credits have been claimed successfully!",
+        description: `${timeCredits} credit${timeCredits !== 1 ? 's' : ''} have been claimed successfully!`,
       })
 
       // Set local state to show claimed status
