@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button"
 import { Check, Gift, Hourglass } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
@@ -49,9 +48,10 @@ const OfferApplyButton = ({
       // Set local state to show claimed status
       setIsClaimed(true)
 
-      // Invalidate relevant queries
+      // Invalidate relevant queries to trigger real-time updates
       queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
       queryClient.invalidateQueries({ queryKey: ['time-balance'] })
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] })
     } catch (error: any) {
       toast({
         variant: "destructive",
