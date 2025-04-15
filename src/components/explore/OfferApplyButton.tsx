@@ -1,9 +1,10 @@
+
 import { Button } from "@/components/ui/button"
 import { Check, Gift, Hourglass } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 interface OfferApplyButtonProps {
   offerId: string
@@ -29,16 +30,76 @@ const OfferApplyButton = ({
   const [isClaiming, setIsClaiming] = useState(false)
   const [isClaimed, setIsClaimed] = useState(false)
 
+  // Check if this transaction has already been claimed
+  useEffect(() => {
+    const checkIfClaimed = async () => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('claimed')
+        .eq('offer_id', offerId)
+        .single()
+      
+      if (data && !error) {
+        setIsClaimed(data.claimed === true)
+      }
+    }
+
+    if (isApplied && status === 'completed' && (applicationStatus === 'accepted' || userApplication?.status === 'accepted')) {
+      checkIfClaimed()
+    }
+  }, [offerId, isApplied, status, applicationStatus, userApplication?.status])
+
   const handleClaim = async () => {
     try {
       setIsClaiming(true)
       
-      const { error } = await supabase
+      // Get current user to verify they are the service provider
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+      
+      // First check if this transaction exists and if user is the provider
+      const { data: transaction, error: fetchError } = await supabase
         .from('transactions')
-        .update({ claimed: true })
+        .select('*')
         .eq('offer_id', offerId)
-
-      if (error) throw error
+        .single()
+        
+      if (fetchError) {
+        // Transaction doesn't exist yet, create it
+        const { data: offer, error: offerError } = await supabase
+          .from('offers')
+          .select('profile_id, time_credits')
+          .eq('id', offerId)
+          .single()
+          
+        if (offerError) throw offerError
+        
+        // Create a new transaction record
+        const { error: createError } = await supabase
+          .from('transactions')
+          .insert({
+            offer_id: offerId,
+            user_id: offer.profile_id,
+            provider_id: user.id,
+            hours: offer.time_credits || 1,
+            service: 'Time Exchange',
+            claimed: true
+          })
+          
+        if (createError) throw createError
+      } else {
+        // Transaction exists, update it
+        if (transaction.provider_id !== user.id) {
+          throw new Error('You are not the service provider for this offer')
+        }
+        
+        const { error } = await supabase
+          .from('transactions')
+          .update({ claimed: true })
+          .eq('offer_id', offerId)
+          
+        if (error) throw error
+      }
 
       toast({
         title: "Success",
@@ -52,12 +113,14 @@ const OfferApplyButton = ({
       queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
       queryClient.invalidateQueries({ queryKey: ['time-balance'] })
       queryClient.invalidateQueries({ queryKey: ['user-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['completed-offers'] })
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Failed to claim credits: " + error.message,
       })
+      console.error('Claim error:', error)
     } finally {
       setIsClaiming(false)
     }
@@ -76,7 +139,7 @@ const OfferApplyButton = ({
         } text-white`}
       >
         <Gift className="h-4 w-4 mr-1" />
-        {isClaimed ? 'Credits Claimed' : 'Claim Credits'}
+        {isClaiming ? 'Claiming...' : isClaimed ? 'Credits Claimed' : 'Claim Credits'}
       </Button>
     )
   }
