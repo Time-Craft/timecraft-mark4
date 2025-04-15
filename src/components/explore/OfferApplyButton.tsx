@@ -34,73 +34,24 @@ const OfferApplyButton = ({
     try {
       setIsClaiming(true)
       
-      // Get offer details first to know the credits amount
-      const { data: offer, error: offerError } = await supabase
-        .from('offers')
-        .select('time_credits, profile_id')
-        .eq('id', offerId)
-        .single()
-      
-      if (offerError) throw offerError
-      
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError) throw userError
-
-      // Create a transaction record for the claim if it doesn't exist
-      const { data: existingTransaction } = await supabase
+      const { error } = await supabase
         .from('transactions')
-        .select('*')
+        .update({ claimed: true })
         .eq('offer_id', offerId)
-        .eq('provider_id', user.id)
-        .single()
 
-      if (!existingTransaction) {
-        const { error: transactionError } = await supabase
-          .from('transactions')
-          .insert({
-            service: 'Time Service',
-            hours: offer.time_credits,
-            user_id: offer.profile_id,
-            provider_id: user.id,
-            offer_id: offerId,
-            claimed: true
-          })
-
-        if (transactionError) throw transactionError
-      } else {
-        // Update existing transaction to claimed
-        const { error: updateError } = await supabase
-          .from('transactions')
-          .update({ claimed: true })
-          .eq('id', existingTransaction.id)
-
-        if (updateError) throw updateError
-      }
-
-      // Update user's time balance
-      const { error: balanceError } = await supabase
-        .from('time_balances')
-        .update({ 
-          balance: supabase.sql`balance + ${offer.time_credits}`,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id)
-
-      if (balanceError) throw balanceError
+      if (error) throw error
 
       toast({
         title: "Success",
-        description: `${offer.time_credits} credits have been claimed successfully!`,
+        description: "Credits have been claimed successfully!",
       })
 
       // Set local state to show claimed status
       setIsClaimed(true)
 
-      // Invalidate relevant queries for real-time updates
+      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
       queryClient.invalidateQueries({ queryKey: ['time-balance'] })
-      queryClient.invalidateQueries({ queryKey: ['user-stats'] })
     } catch (error: any) {
       toast({
         variant: "destructive",
