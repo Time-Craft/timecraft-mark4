@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button"
 import { Check, Gift, Hourglass } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
@@ -77,15 +78,14 @@ const OfferApplyButton = ({
         if (updateError) throw updateError
       }
 
-      // Update user's time balance using a raw increment instead of sql template
+      // Update user's time balance
       const { error: balanceError } = await supabase
         .from('time_balances')
         .update({ 
-          balance: offer.time_credits,
+          balance: supabase.sql`balance + ${offer.time_credits}`,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id)
-        .select()
 
       if (balanceError) throw balanceError
 
